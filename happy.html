@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Happy JS</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+    h1 {
+      margin: 0;
+      color: crimson;
+    }
+    .field, .input-container {
+      margin: 1rem 0;
+    }
+    .input-group label {
+      display: block;
+    }
+    header {
+      padding: 0.5rem 1rem;
+    }
+    main {
+      padding: 0 1rem;
+
+    }
+    footer {
+      background-color: whitesmoke;
+      margin-top: 2rem;
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Happy JS v2</h1>
+  </header>
+  <hr>
+  <main>
+    <form method="POST" onsubmit="form.onSubmit(this, event)" novalidate>
+      <div class="field">
+        <label>Field 1</label>
+        <div class="input-container">
+          <input class="input" name="form[v1]" value="">
+        </div>
+      </div>
+      <div id="datetime_1" class="field datepicker" data-type="DatePicker">
+        <label>Field 2</label>
+        <div class="input-widget">
+          <span class="input-container">
+            <input class="input" name="form[v2]" value="">
+          </span>
+          <button type="button" class="toggle">CAL</button>
+        </div>
+      </div>
+      <div id="fullname_1" class="field fullname" data-type="FullName">
+        <label>Field 3</label>
+        <fieldset class="input-widget">
+          <div class="input-container">
+            <label>Field 3.1</label>
+            <input class="input" name="form[firstname]" value="">
+          </div>
+          <div class="input-container">
+            <label>Field 3.2</label>
+            <input class="input" name="form[lastname]" value="">
+          </div>
+        </fieldset>
+      </div>
+      <div id="question_1" class="field" data-type="RadioList">
+        <label>Field 4</label>
+        <div class="input-group radio-group">
+          <label>
+            <input class="input" type="radio" name="form[v4]" value="A">
+            Option A
+          </label>
+          <label>
+            <input class="input" type="radio" name="form[v4]" value="B">
+            Option B
+          </label>
+          <label>
+            <input class="input" type="radio" name="form[v4]" value="C">
+            Option C
+          </label>
+        </div>
+      </div>
+      <div id="question_2" class="field" data-type="CheckList">
+        <label>Field 5</label>
+        <div class="input-group check-group">
+          <label>
+            <input class="input" type="checkbox" name="form[v5]" value="1">
+            Option 1
+          </label>
+          <label>
+            <input class="input" type="checkbox" name="form[v5]" value="2">
+            Option 2
+          </label>
+          <label>
+            <input class="input" type="checkbox" name="form[v5]" value="3">
+            Option 3
+          </label>
+        </div>
+      </div>
+      <hr>
+      <br>
+      <div class="actions-bar">
+        <button type="submit">Submit</button>
+      </div>
+    </form>
+  </main>
+  <footer>
+<!--    <label>App State:</label>
+   <pre><?=print_r($app->state, true)?></pre> -->
+  </footer>
+  <script src="happy.ext.js"></script>
+  <script src="happy.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
