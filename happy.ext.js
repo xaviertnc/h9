@@ -8,156 +8,212 @@ window.F1 = window.F1 || {};
 
 window.$happy = window.$happy || {};
 
-$happy.Ext = $happy.Ext || {};
+
+(function(F1, $happy) {
 
 
-//// STREET ADDRESS
-$happy.Ext.StreetAddress = {
+  $happy.Ext = $happy.Ext || {};
 
-  happyType: 'streetaddress',
 
-  $state: {
+  //// RADIO INPUT
+  $happy.Ext.Radio = {
 
-    init: function(data) {
-      var field = this.model, val = data.value;
-      field.children[0].$state.init({ value: val.street });
-      field.children[1].$state.init({ value: val.suburb });
-      field.children[2].$state.init({ value: val.city   });
-      this.initial = data; return this.data = $happy.clone(data);
-    },
+    happyType: 'radio',
 
-    reset: function(key) {
-      this.model.children.forEach(function(child) { child.$state.reset(key); });
-      return key ? this.data[key] = this.initial[key] : this.data = $happy.clone(this.initial);
+    $view: {
+      getVal: function() { var elInput = this.model.el; return elInput.checked ? elInput.value : ''; }
     }
 
   },
 
-  $view: {
 
-    setVal: function(val) {
-      var field = this.model;
-      field.children[0].$view.setVal(val.street);
-      field.children[1].$view.setVal(val.suburb);
-      field.children[2].$view.setVal(val.city);
-      return val; // important!
+  //// CHECKBOX INPUT
+  $happy.Ext.Checkbox = {
+
+    happyType: 'checkbox',
+
+    $view: {
+      getVal: function() { var elInput = this.model.el; return elInput.checked ? elInput.value : ''; }
+    }
+
+  },
+
+
+  //// CHECK LIST FIELD
+  $happy.Ext.CheckList = {
+
+    happyType: 'checklist'
+
+  },
+
+
+  //// CHECK LIST FIELD
+  $happy.Ext.RadioList = {
+
+    happyType: 'radiolist'
+
+  },
+
+
+  //// STREET ADDRESS FIELD
+  $happy.Ext.StreetAddress = {
+
+    happyType: 'streetaddress',
+
+    $state: {
+
+      init: function(data) {
+        var field = this.model, val = data.value;
+        field.children[0].$state.init({ value: val.street });
+        field.children[1].$state.init({ value: val.suburb });
+        field.children[2].$state.init({ value: val.city   });
+        this.initial = data; return this.data = $happy.clone(data);
+      },
+
+      reset: function(key) {
+        this.model.children.forEach(function(child) { child.$state.reset(key); });
+        return key ? this.data[key] = this.initial[key] : this.data = $happy.clone(this.initial);
+      }
+
     },
 
-    getVal: function(val) {
-      var field = this.model;
-      val.street = field.children[0].$view.getVal('value');
-      val.suburb = field.children[1].$view.getVal('value');
-      val.city   = field.children[2].$view.getVal('value');
-      return val;
-    },
+    $view: {
 
-    make: function() {
+      setVal: function(val) {
+        var field = this.model;
+        field.children[0].$view.setVal(val.street);
+        field.children[1].$view.setVal(val.suburb);
+        field.children[2].$view.setVal(val.city);
+        return val; // important!
+      },
 
-      const parts = {};
+      getVal: function(val) {
+        var field = this.model;
+        val.street = field.children[0].$view.getVal('value');
+        val.suburb = field.children[1].$view.getVal('value');
+        val.city   = field.children[2].$view.getVal('value');
+        return val;
+      },
 
-      const el = document.createElement('div');
+      make: function() {
 
-      parts.fieldLabel = document.createElement('label');
-      parts.widgetContainer = document.createElement('fieldset');
-      parts.street      = document.createElement('div');
-      parts.streetLabel = document.createElement('label');
-      parts.streetInput = document.createElement('input');
-      parts.suburb      = document.createElement('div');
-      parts.suburbLabel = document.createElement('label');
-      parts.suburbInput = document.createElement('input');
-      parts.city        = document.createElement('div');
-      parts.cityLabel   = document.createElement('label');
-      parts.cityInput   = document.createElement('input');
-      parts.pcode       = document.createElement('div');
-      parts.pcodeLabel  = document.createElement('label');
-      parts.pcodeInput  = document.createElement('input');
+        const parts = {};
 
-      el.className = 'field';
-      el.setAttribute('data-type', 'StreetAddress');
-      parts.fieldLabel.innerHTML = this.label || 'I\'m an ADDRESS';
-      parts.widgetContainer.className = 'input-widget';
+        const el = document.createElement('div');
 
-      parts.street.className = 'input-container';
-      parts.streetLabel.innerHTML = this.streetLabel || 'Street Name';
-      parts.streetInput.className = 'input';
+        parts.fieldLabel = document.createElement('label');
+        parts.widgetContainer = document.createElement('fieldset');
+        parts.street      = document.createElement('div');
+        parts.streetLabel = document.createElement('label');
+        parts.streetInput = document.createElement('input');
+        parts.suburb      = document.createElement('div');
+        parts.suburbLabel = document.createElement('label');
+        parts.suburbInput = document.createElement('input');
+        parts.city        = document.createElement('div');
+        parts.cityLabel   = document.createElement('label');
+        parts.cityInput   = document.createElement('input');
+        parts.pcode       = document.createElement('div');
+        parts.pcodeLabel  = document.createElement('label');
+        parts.pcodeInput  = document.createElement('input');
 
-      parts.street.appendChild(parts.streetLabel);
-      parts.street.appendChild(parts.streetInput);
+        el.className = 'field';
+        el.setAttribute('data-type', 'StreetAddress');
+        parts.fieldLabel.innerHTML = this.label || 'I\'m an ADDRESS';
+        parts.widgetContainer.className = 'input-widget';
 
-      parts.suburb.className = 'input-container';
-      parts.suburbLabel.innerHTML = this.suburbLabel || 'Suburb';
-      parts.suburbInput.className = 'input';
+        parts.street.className = 'input-container';
+        parts.streetLabel.innerHTML = this.streetLabel || 'Street Name';
+        parts.streetInput.className = 'input';
 
-      parts.suburb.appendChild(parts.suburbLabel);
-      parts.suburb.appendChild(parts.suburbInput);
+        parts.street.appendChild(parts.streetLabel);
+        parts.street.appendChild(parts.streetInput);
 
-      parts.city.className = 'input-container';
-      parts.cityLabel.innerHTML = this.cityLabel || 'City';
-      parts.cityInput.className = 'input';
+        parts.suburb.className = 'input-container';
+        parts.suburbLabel.innerHTML = this.suburbLabel || 'Suburb';
+        parts.suburbInput.className = 'input';
 
-      parts.city.appendChild(parts.cityLabel);
-      parts.city.appendChild(parts.cityInput);
+        parts.suburb.appendChild(parts.suburbLabel);
+        parts.suburb.appendChild(parts.suburbInput);
 
-      parts.pcode.className = 'input-container';
-      parts.pcode.setAttribute('data-type', 'PostalCode');
-      parts.pcodeLabel.innerHTML = this.pcodeLabel || 'Code';
-      parts.pcodeInput.className = 'input';
-      parts.pcodeInput.type = 'number';
+        parts.city.className = 'input-container';
+        parts.cityLabel.innerHTML = this.cityLabel || 'City';
+        parts.cityInput.className = 'input';
 
-      parts.pcode.appendChild(parts.pcodeLabel);
-      parts.pcode.appendChild(parts.pcodeInput);
+        parts.city.appendChild(parts.cityLabel);
+        parts.city.appendChild(parts.cityInput);
 
-      parts.widgetContainer.appendChild(parts.street);
-      parts.widgetContainer.appendChild(parts.suburb);
-      parts.widgetContainer.appendChild(parts.city);
-      parts.widgetContainer.appendChild(parts.pcode);
+        parts.pcode.className = 'input-container';
+        parts.pcode.setAttribute('data-type', 'PostalCode');
+        parts.pcodeLabel.innerHTML = this.pcodeLabel || 'Code';
+        parts.pcodeInput.className = 'input';
+        parts.pcodeInput.type = 'number';
 
-      el.appendChild(parts.fieldLabel);
-      el.appendChild(parts.widgetContainer);
+        parts.pcode.appendChild(parts.pcodeLabel);
+        parts.pcode.appendChild(parts.pcodeInput);
 
-      if (this.onMake) { this.onMake(el, parts); }
+        parts.widgetContainer.appendChild(parts.street);
+        parts.widgetContainer.appendChild(parts.suburb);
+        parts.widgetContainer.appendChild(parts.city);
+        parts.widgetContainer.appendChild(parts.pcode);
 
-      return el;
+        el.appendChild(parts.fieldLabel);
+        el.appendChild(parts.widgetContainer);
 
-    }, // end: view.make
+        if (this.onMake) { this.onMake(el, parts); }
 
-  }, // end view
+        return el;
 
-}; // end: StreetAddress
+      }, // end: view.make
+
+    }, // end view
+
+  }; // end: StreetAddress
 
 
-//// NOTE
-$happy.Ext.Note = {
+  //// NOTE FIELD
+  $happy.Ext.Note = {
 
-  happyType: 'note',
+    happyType: 'note',
 
-  $view: {
+    $view: {
 
-    make: function() {
+      make: function() {
 
-      const parts = {};
+        const parts = {};
 
-      const el = document.createElement('div');
+        const el = document.createElement('div');
 
-      el.className = 'field';
-      el.setAttribute('data-type', 'Note');
+        el.className = 'field';
+        el.setAttribute('data-type', 'Note');
 
-      parts.label = document.createElement('label');
-      parts.label.innerHTML = 'I\'m a NOTE';
-      parts.label.style.display='block';
+        parts.label = document.createElement('label');
+        parts.label.innerHTML = 'I\'m a NOTE';
+        parts.label.style.display='block';
 
-      parts.input = document.createElement('textarea');
-      parts.input.className = 'input';
+        parts.input = document.createElement('textarea');
+        parts.input.className = 'input';
 
-      el.appendChild(parts.label);
-      el.appendChild(parts.input);
+        el.appendChild(parts.label);
+        el.appendChild(parts.input);
 
-      if (this.onMake) { this.onMake(el, parts); }
+        if (this.onMake) { this.onMake(el, parts); }
 
-      return el;
+        return el;
 
-    }, // end: view.make
+      }, // end: view.make
 
-  }, // end view
+    }, // end view
 
-}; // end: Note
+  }; // end: Note
+
+
+  //// EXTEND HAPPY
+  $happy.CheckList = $happy.extend($happy.Field, $happy.Ext.CheckList);
+  $happy.RadioList = $happy.extend($happy.Field, $happy.Ext.RadioList);
+  $happy.Note = $happy.extend($happy.Field, $happy.Ext.Note);
+  $happy.StreetAddress = $happy.extend($happy.Field, $happy.Ext.StreetAddress);
+  $happy.Radio = $happy.extend($happy.Input, $happy.Ext.Radio);
+  $happy.Checkbox = $happy.extend($happy.Input, $happy.Ext.Checkbox);
+
+
+}(window.F1, window.$happy));

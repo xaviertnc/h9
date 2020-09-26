@@ -36,7 +36,7 @@
 </head>
 <body>
   <header>
-    <h1>Happy JS v2</h1>
+    <h1>Happy JS v9</h1>
   </header>
   <hr>
   <main>
@@ -65,40 +65,40 @@
           </div>
           <div class="input-container">
             <label>Field 3.2</label>
-            <input class="input" name="form[lastname]" value="">
+            <input class="input" name="form[lastname]" value="Moller">
           </div>
         </fieldset>
       </div>
       <div id="question_1" class="field" data-type="RadioList">
-        <label>Field 4</label>
+        <label>Question 1</label>
         <div class="input-group radio-group">
           <label>
-            <input class="input" type="radio" name="form[v4]" value="A">
+            <input class="input" type="radio" name="form[q1]" value="A">
             Option A
           </label>
           <label>
-            <input class="input" type="radio" name="form[v4]" value="B">
+            <input class="input" type="radio" name="form[q1]" value="B" checked>
             Option B
           </label>
           <label>
-            <input class="input" type="radio" name="form[v4]" value="C">
+            <input class="input" type="radio" name="form[q1]" value="C">
             Option C
           </label>
         </div>
       </div>
       <div id="question_2" class="field" data-type="CheckList">
-        <label>Field 5</label>
+        <label>Question 2</label>
         <div class="input-group check-group">
           <label>
-            <input class="input" type="checkbox" name="form[v5]" value="1">
+            <input class="input" type="checkbox" name="form[q2]" value="1">
             Option 1
           </label>
           <label>
-            <input class="input" type="checkbox" name="form[v5]" value="2">
+            <input class="input" type="checkbox" name="form[q2]" value="2" checked>
             Option 2
           </label>
           <label>
-            <input class="input" type="checkbox" name="form[v5]" value="3">
+            <input class="input" type="checkbox" name="form[q2]" value="3" checked>
             Option 3
           </label>
         </div>
@@ -114,8 +114,8 @@
 <!--    <label>App State:</label>
    <pre><?=print_r($app->state, true)?></pre> -->
   </footer>
-  <script src="happy.ext.js"></script>
   <script src="happy.js"></script>
+  <script src="happy.ext.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
