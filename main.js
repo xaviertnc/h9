@@ -18,19 +18,14 @@ $happy.StreetAddress = $happy.extend($happy.Field, $happy.Ext.StreetAddress);
 
 
 //// APPLICATION
-const elQ2 = document.getElementById('question_2');
+var elQ2 = document.getElementById('question_2');
+var streetAddress = { street: 'My Street', suburb: 'My Suburb', city: 'My City' };
+var form = new $happy.HappyElement(F1, { as: $happy.Form });
 
-const form = new $happy.HappyElement(F1, { as: $happy.Form });
+form.addEl(new $happy.HappyElement(form, { as: $happy.StreetAddress, elMount: elQ2, mountStyle: 'before', selector: null, val: streetAddress }));
+form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMount: elQ2, mountStyle: 'after', selector: null, val: 'Hello World!' }));
 
-form.addEl(new $happy.HappyElement(form, { as: $happy.StreetAddress, elMount: elQ2, mountStyle: 'before', selector: null }));
-form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMount: elQ2, mountStyle: 'after', selector: null }));
-
-form.onSubmit = function(elForm, event) {
-  console.log('Form submitted.', this);
-  event.preventDefault();
-}
-
-
+form.onSubmit = function(elForm, event) { console.log('Form submitted.', this); event.preventDefault(); }
 
 
 console.log('form:', form);

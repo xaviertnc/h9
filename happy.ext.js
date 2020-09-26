@@ -16,7 +16,40 @@ $happy.Ext.StreetAddress = {
 
   happyType: 'streetaddress',
 
+  $state: {
+
+    init: function(data) {
+      var field = this.model, val = data.value;
+      field.children[0].$state.init({ value: val.street });
+      field.children[1].$state.init({ value: val.suburb });
+      field.children[2].$state.init({ value: val.city   });
+      this.initial = data; return this.data = $happy.clone(data);
+    },
+
+    reset: function(key) {
+      this.model.children.forEach(function(child) { child.$state.reset(key); });
+      return key ? this.data[key] = this.initial[key] : this.data = $happy.clone(this.initial);
+    }
+
+  },
+
   $view: {
+
+    setVal: function(val) {
+      var field = this.model;
+      field.children[0].$view.setVal(val.street);
+      field.children[1].$view.setVal(val.suburb);
+      field.children[2].$view.setVal(val.city);
+      return val; // important!
+    },
+
+    getVal: function(val) {
+      var field = this.model;
+      val.street = field.children[0].$view.getVal('value');
+      val.suburb = field.children[1].$view.getVal('value');
+      val.city   = field.children[2].$view.getVal('value');
+      return val;
+    },
 
     make: function() {
 

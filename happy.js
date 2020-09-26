@@ -29,14 +29,31 @@ function clone(obj) { return extend({}, obj || {}, 'deep'); }
 
 function nextId(group) { nextIds[group] = nextIds[group] || 1; return group + '_' + nextIds[group]++; }
 
+function isSame(obj1, obj2) {
+    for (var i in obj1) { if (obj1[i] != obj2[i]) return false; }
+    for (var i in obj2) { if (obj1[i] != obj2[i]) return false; }
+    return true;
+}
 
-// HAPPY CONTROLLER
-function Controller() {}
-Controller.prototype = {
+
+//// HAPPY STATE SERVICE
+function State(model) { this.model = model; model.data = model.data || {}; this.init(model.data); }
+State.prototype = {
+  copy: function(key) { let val = this.get(key); return (typeof val === 'object') ? clone(val) : val; },
+  get: function(key, defaultVal) { return this.data[key] || defaultVal; },
+  set: function(key, val, init) { return this.data[key] = clone(val); if (init) { this.initial[key] = val; } },
+  reset: function(key) { return key ? this.data[key] = this.initial[key] : this.data = clone(this.initial); },
+  init: function(data) { this.initial = data; return this.data = clone(data); },
+  modified: function() { return isSame(this.data, this.initial) },
+  happy: function() { return this.model.isHappy; },
+  mapDataIn: function(data) { return data; },
+  mapDataOut: function(data) { return data; },
+  store: function(opt) {}, // opt.ajaxUrl or opt.localStorageKey
+  fetch: function(opt) {}
 };
 
 
-// HAPPY VIEW SERVICE
+//// HAPPY VIEW SERVICE
 function View(model) { this.model = model; }
 View.prototype = {
   findEl: function(selector, elContext, elDefault) { elContext = elContext || document;
@@ -58,32 +75,24 @@ View.prototype = {
     }
     return elView;
   },
+  // parseVal: function(val) { console.log('parseVal:', val); return val; },
+  // formatVal: function(val) { console.log('formatVal:', val); return val; },
   parseVal: function(val) { return val; },
   formatVal: function(val) { return val; },
   getVal: function() { return this.parseVal(this.model.el.value); },
-  setVal: function(val) { this.model.el.value = this.formatVal(val); },
+  setVal: function(val) { var val = this.formatVal(val); this.model.el.value = val;
+    if (this.model.children.length) { this.model.children[0].el.value = val; } },
   update: function() {},
 };
 
 
-// HAPPY STATE SERVICE
-// State logic
-// Gets modeldata
-// Stores data?
-// Update view?
-function State(model) { this.model = model; model.data = model.data || {}; this.data = model.data; }
-State.prototype = {
-  copy: function(key) { let val = this.get(key); return (typeof val === 'object') ? clone(val) : val; },
-  get: function(key, defaultVal) { return this.data[key] || defaultVal; },
-  set: function(key, val) { return this.data[key] = val; },
-  import: function(data) { return data; },
-  export: function(data) { return data; },
-  store: function(opt) {}, // opt.ajaxUrl or opt.localStorageKey
-  fetch: function(opt) {}
+//// HAPPY CONTROLLER
+function Controller() {}
+Controller.prototype = {
 };
 
 
-// HAPPY ELEMENT
+//// HAPPY ELEMENT
 function HappyElement(parent, opt) {
   opt = opt || {};
   this.parent = parent;
@@ -95,8 +104,7 @@ function HappyElement(parent, opt) {
   this.el = this.getEl();
   this.id = this.opt.id || this.getId();
   this.children = this.getChildren();
-  this.$state.set('initialValue', this.opt.val ? this.$view.setVal(this.opt.val) : this.$view.getVal());
-  this.$state.set('value', this.$state.copy('initialValue'));
+  this.$state.init({ value: this.opt.val ? this.$view.setVal(this.opt.val) : this.$view.getVal() });
   if (this.opt.onInit) { this.opt.onInit(this); }
 }
 HappyElement.prototype = {
@@ -123,10 +131,10 @@ HappyElement.prototype = {
 };
 
 
-// HAPPY FORM
+//// HAPPY FORM
 const Form = {
   happyType: 'form',
-  addChild: function(child) { this.children.push(child); this.fields[child.id] = child; },
+  addEl: function(child) { this.children.push(child); this.fields[child.id] = child; },
   opt: {
     selector: 'form',
     childSelector: '.field',
@@ -164,7 +172,7 @@ const Message = {
 };
 
 
-extend(window.$happy, { HappyElement, Form, Field, Input, Message });
+extend(window.$happy, { HappyElement, Form, Field, Input, Message, extend, clone });
 
 window.$happy.extend = function (blueprint, extension) {
     return extend(clone(blueprint), extension || {}, 'deep');
