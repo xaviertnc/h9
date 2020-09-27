@@ -23,6 +23,8 @@ form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMount: elQ2, mount
 form.onSubmit = function(elForm, event) {
 	console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', this);
 	event.preventDefault();
+	var res = this.$state.getHappy('check');
+	console.log('getHappy() Result:', res, ', isHappy:', this.$state.isHappy );
 }
 
 

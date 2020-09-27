@@ -37,7 +37,7 @@ window.$happy.Ext = window.$happy.Ext || {};
   function upperFirst(string) { return string[0].toUpperCase() + string.slice(1); }
 
 
-  //// HAPPY STATE SERVICE
+  //////// STATE /////////
   function State(model) { this.model = model; this.data = {}; this.isHappy = true; this.isModified = false; }
   State.prototype = {
     copy: function(key) { var val = this.get(key); return (typeof val === 'object') ? clone(val) : val; },
@@ -54,7 +54,7 @@ window.$happy.Ext = window.$happy.Ext || {};
   };
 
 
-  //// HAPPY VIEW SERVICE
+  //////// VIEW /////////
   function View(model) { this.model = model; }
   View.prototype = {
     findEl: function(selector, elContext, elDefault) { elContext = elContext || document;
@@ -68,6 +68,7 @@ window.$happy.Ext = window.$happy.Ext || {};
       type = el.getAttribute('type'); if (type) { return upperFirst(type); }
       return defaultType;
     },
+    getValidators: function() { return this.model.el.required ? ['required'] : []; },
     getVal: function() { return this.model.el.value; },
     setVal: function(val) { this.model.el.value = val; if (this.model.children.length) { this.model.children[0].el.value = val; } },
     make: function() { return document.createElement('div'); },
@@ -82,13 +83,13 @@ window.$happy.Ext = window.$happy.Ext || {};
   };
 
 
-  //// HAPPY CONTROLLER
+  //////// CONTROLLER /////////
   function Controller() {}
   Controller.prototype = {
   };
 
 
-  //// HAPPY ELEMENT
+  //////// HAPPY ELEMENT /////////
   function HappyElement(parent, opt) {
     opt = opt || {};
     this.parent = parent;
@@ -96,10 +97,11 @@ window.$happy.Ext = window.$happy.Ext || {};
     this.$view  = new View(this);
     this.controller = new Controller();
     if (opt.as) { extend(this, opt.as, 'deep'); delete opt.as; }
+    if (this.opt.beforeInit) { if (this.opt.beforeInit(this, opt)) { return; }}
     this.opt = extend(this.opt || {}, opt); // Allows overriding ext options.
     this.el = this.getEl();
     this.id = this.opt.id || this.getId();
-    this.children = this.getChildren();
+    this.childNodes = []; this.children = this.getChildren();
     this.$state.init({ value: this.opt.val ? this.$view.setVal(this.opt.val) : this.getVal() });
     if (this.opt.onInit) { this.opt.onInit(this); }
   }
@@ -117,62 +119,76 @@ window.$happy.Ext = window.$happy.Ext || {};
       return cvs.join('|'); } return this.$view.getVal();
     },
     getChildren: function() {
-      var children = [], self = this, $view = this.$view, defType = this.getO('defaultChildType');
-      this.childNodes = $view.findElAll(this.getO('childSelector'), this.el);
-      this.childNodes.forEach(function(elChild) {
+      var children = [], self = this, $view = this.$view, defType = this.getO('defaultChildType'),
+      childNodes = $view.findElAll(this.getO('childSelector'), this.el);
+      childNodes.forEach(function(elChild) {
         var child, childType = $view.getType(elChild, defType), opt = { el: elChild };
         if ($happy[childType]) { opt.as = $happy[childType]; }
         else if ($happy[defType]) { opt.as = $happy[defType]; }
         child = new HappyElement(self, opt);
         //window.console.log('getChildren(), defType:', defType, ',childType:', childType, elChild, child);
+        self.childNodes.push(elChild);
         children.push(child);
       });
       return children;
     },
-    addEl: function(happyElement) { this.children.push(happyElement); }
+    addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el); }
   };
 
 
-  //// HAPPY FORM
-  var Form = {
-    happyType: 'form',
-    addEl: function(child) { this.children.push(child); this.fields[child.id] = child; },
-    opt: {
-      selector: 'form',
-      childSelector: '.field',
-      defaultChildType: 'Field',
-      onInit: function(self) { self.fields = {};
-        self.children.forEach(function(child) { self.fields[child.id] = child; });
-      },
-      $state: {
-        get: function(key, defaultVal) { return this.data[key] || defaultVal; },
-        init: function(data) { this.initial = data; return this.data = clone(data); }
-      }
+  //////// VALIDATABLE /////////
+  var Validatable = {  validators: [], errors: [], messages: [],
+    validate: function(reason, event) { var errors = [], childErrors;
+      window.console.log(this.happyType + '::validate(), reason:', reason, ', event:', event);
+      this.children.forEach(function(child){ if (child.validate) { childErrors = child.validate(reason, event); } });
+      this.validators = this.getO('validators') || this.$view.getValidators();
+      window.console.log(this.happyType + '::validators =', this.validators);
+      this.validators.forEach(function(validator) { errors = errors.concat(validator.validate(this, reason, event)); });
+      window.console.log(this.happyType + '::errors =', errors, ', childErrors =', childErrors);
+      this.errors = this.errors.concat(childErrors, errors);
+      return this.errors;
+    },
+  }
+
+
+  //////// FORM /////////
+  var Form = { happyType: 'form',
+    addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child; },
+    opt: { selector: 'form', childSelector: '.field', defaultChildType: 'Field',
+      beforeInit: function(self, origOpt) { extend(self, Validatable, 'deep'); },
+      onInit: function(self) { self.fields = {}; self.children.forEach(function(child) { self.fields[child.id] = child; }); },
     }
   };
 
 
-  // HAPPY FIELD
-  var Field = {
-    happyType: 'field',
-    opt: {
-      selector: 'field',
-      childSelector: '.input',
-      defaultChildType: 'Input',
-      onInit: function(self) { self.inputs = {};
-        self.children.forEach(function(child) { self.inputs[child.id] = child; });
-      }
+  //////// FIELD /////////
+  var Field = { happyType: 'field',
+    opt: { selector: '.field', childSelector: '.input', defaultChildType: 'Input',
+      beforeInit: function(self, origOpt) { extend(self, Validatable, 'deep'); },
+      onInit: function(self) { self.inputs = {}; self.children.forEach(function(child) { self.inputs[child.id] = child; }); }
     }
   };
 
 
-  // HAPPY INPUT
-  var Input = {
-    happyType: 'input',
+  //////// INPUT /////////
+  var Input = { happyType: 'input',
+    opt: { selector: '.input', beforeInit: function(self, origOpt) { extend(self, Validatable, 'deep'); } }
   };
 
 
-  // HAPPY MESSAGE
+  //////// VALIDATOR /////////
+  const Validator = function(name, props) {
+    this.id = name; this.validateFn = props.validateFn;
+    this.messageFn = props.messageFn || function(o){ return o.label?o.label+' is invalid.':'invalid'; };
+    this.summaryMessageFn = props.summaryMessageFn || this.messageFn; };
+  Validator.prototype = { modelType: 'validator',
+    validate: function(model, isSubmit, args, event) { return this.validateFn(model, isSubmit, args, event); },
+    getMessage: function(model, isSubmit, args, event) { return this.messageFn(model, isSubmit, args, event); },
+    getSummaryMessage: function(model, isSubmit, args, event) { return this.sumaryMsgTemplateFn(model, isSubmit, args, event); }
+  };
+
+
+  //////// MESSAGE /////////
   var Message = {
     happyType: 'message',
   };
