@@ -68,7 +68,7 @@ window.$happy.Ext = window.$happy.Ext || {};
       type = el.getAttribute('type'); if (type) { return upperFirst(type); }
       return defaultType;
     },
-    getValidators: function() { return this.model.el.required ? ['required'] : []; },
+    getValidators: function() { return this.model.el.required ? [new Validator('required', ValidateRequired)] : []; },
     getVal: function() { return this.model.el.value; },
     setVal: function(val) { this.model.el.value = val; if (this.model.children.length) { this.model.children[0].el.value = val; } },
     make: function() { return document.createElement('div'); },
@@ -120,7 +120,7 @@ window.$happy.Ext = window.$happy.Ext || {};
     },
     getChildren: function() {
       var children = [], self = this, $view = this.$view, defType = this.getO('defaultChildType'),
-      childNodes = $view.findElAll(this.getO('childSelector'), this.el);
+        childNodes = $view.findElAll(this.getO('childSelector'), this.el);
       childNodes.forEach(function(elChild) {
         var child, childType = $view.getType(elChild, defType), opt = { el: elChild };
         if ($happy[childType]) { opt.as = $happy[childType]; }
@@ -136,26 +136,48 @@ window.$happy.Ext = window.$happy.Ext || {};
   };
 
 
+  //////// VALIDATOR /////////
+  function Validator(id, props) {
+    this.id = id; this.validateFn = props.validateFn;
+    this.messageFn = props.messageFn || function (o) { return o.label ? o.label + ' is invalid.':'invalid'; };
+    this.summaryMessageFn = props.summaryMessageFn || this.messageFn;
+    this.argsFn = props.argsFn || function () { return props.args || {}; };
+  }
+  Validator.prototype = { modelType: 'validator',
+    validate: function(model, reason, event) { return this.validateFn(model, reason, event); },
+    getMessage: function(model, reason, event) { return this.messageFn(model, reason, event); },
+    getSummaryMessage: function(model, reason, event) { return this.sumaryMsgTemplateFn(model, reason, event); },
+    getArgs: function(model, reason, event) { return this.argsFn(model, reason, event); }
+  };
+
+
+  //////// REQUIRED /////////
+  var ValidateRequired = {
+    validateFn: function(model) { return model.value.length; },
+    messageFn : function(model) { return model.label ? model.label +' is required.' : 'required'; }
+  };
+
+
   //////// VALIDATABLE /////////
   var Validatable = {  validators: [], errors: [], messages: [],
-    validate: function(reason, event) { var errors = [], childErrors;
+    validate: function(reason, event) { var self = this, errors = [], childErrors;
       window.console.log(this.happyType + '::validate(), reason:', reason, ', event:', event);
       this.children.forEach(function(child){ if (child.validate) { childErrors = child.validate(reason, event); } });
       this.validators = this.getO('validators') || this.$view.getValidators();
       window.console.log(this.happyType + '::validators =', this.validators);
-      this.validators.forEach(function(validator) { errors = errors.concat(validator.validate(this, reason, event)); });
+      this.validators.forEach(function(validator) { errors = errors.concat(validator.validate(self, reason, event)); });
       window.console.log(this.happyType + '::errors =', errors, ', childErrors =', childErrors);
       this.errors = this.errors.concat(childErrors, errors);
       return this.errors;
     },
-  }
+  };
 
 
   //////// FORM /////////
   var Form = { happyType: 'form',
     addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child; },
     opt: { selector: 'form', childSelector: '.field', defaultChildType: 'Field',
-      beforeInit: function(self, origOpt) { extend(self, Validatable, 'deep'); },
+      beforeInit: function(self/*, origOpt*/) { extend(self, Validatable, 'deep'); },
       onInit: function(self) { self.fields = {}; self.children.forEach(function(child) { self.fields[child.id] = child; }); },
     }
   };
@@ -164,7 +186,7 @@ window.$happy.Ext = window.$happy.Ext || {};
   //////// FIELD /////////
   var Field = { happyType: 'field',
     opt: { selector: '.field', childSelector: '.input', defaultChildType: 'Input',
-      beforeInit: function(self, origOpt) { extend(self, Validatable, 'deep'); },
+      beforeInit: function(self/*, origOpt*/) { extend(self, Validatable, 'deep'); },
       onInit: function(self) { self.inputs = {}; self.children.forEach(function(child) { self.inputs[child.id] = child; }); }
     }
   };
@@ -172,19 +194,7 @@ window.$happy.Ext = window.$happy.Ext || {};
 
   //////// INPUT /////////
   var Input = { happyType: 'input',
-    opt: { selector: '.input', beforeInit: function(self, origOpt) { extend(self, Validatable, 'deep'); } }
-  };
-
-
-  //////// VALIDATOR /////////
-  const Validator = function(name, props) {
-    this.id = name; this.validateFn = props.validateFn;
-    this.messageFn = props.messageFn || function(o){ return o.label?o.label+' is invalid.':'invalid'; };
-    this.summaryMessageFn = props.summaryMessageFn || this.messageFn; };
-  Validator.prototype = { modelType: 'validator',
-    validate: function(model, isSubmit, args, event) { return this.validateFn(model, isSubmit, args, event); },
-    getMessage: function(model, isSubmit, args, event) { return this.messageFn(model, isSubmit, args, event); },
-    getSummaryMessage: function(model, isSubmit, args, event) { return this.sumaryMsgTemplateFn(model, isSubmit, args, event); }
+    opt: { selector: '.input', beforeInit: function(self/*, origOpt*/) { extend(self, Validatable, 'deep'); } }
   };
 
 
@@ -194,11 +204,8 @@ window.$happy.Ext = window.$happy.Ext || {};
   };
 
 
-  extend(window.$happy, { HappyElement, Form, Field, Input, Message, isSame, extend, clone });
+  extend(window.$happy, { HappyElement, Validator, Validatable, Form, Field, Input, Message, isSame, extend, clone });
 
-  window.$happy.extend = function (blueprint, extension) {
-    return extend(clone(blueprint), extension || {}, 'deep');
-  };
-
+  window.$happy.extend = function (blueprint, extension) { return extend(clone(blueprint), extension || {}, 'deep'); };
 
 }(window.F1, window.$happy));
