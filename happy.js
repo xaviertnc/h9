@@ -34,12 +34,12 @@ window.$happy.Ext = window.$happy.Ext || {};
 
   function clone(obj) { return extend({}, obj || {}, 'deep'); }
 
-  function isObjectLiteral(o) { return (!!o) && (o.constructor === Object); };
+  function isObjectLiteral(o) { return (!!o) && (o.constructor === Object); }
 
   function upperFirst(string) { return string[0].toUpperCase() + string.slice(1); }
 
 
-  //////// STATE /////////
+  //////// HAPPY STATE /////////
   function State(model) { this.model = model; this.data = {}; this.isHappy = true; this.isModified = false; }
   State.prototype = {
     copy: function(key) { var val = this.get(key); return isObjectLiteral(val) ? clone(val) : val; }, // NOTE: doesn't clone arrays!
@@ -56,7 +56,7 @@ window.$happy.Ext = window.$happy.Ext || {};
   };
 
 
-  //////// VIEW /////////
+  //////// HAPPY VIEW /////////
   function View(model) { this.model = model; }
   View.prototype = {
     findEl: function(selector, elContext, elDefault) { elContext = elContext || document;
@@ -70,8 +70,6 @@ window.$happy.Ext = window.$happy.Ext || {};
       type = el.getAttribute('type'); if (type) { return upperFirst(type); }
       return defaultType;
     },
-    getValidators: function() { return this.model.el.required ? [new Validator('required', ValidateRequired)] : []; },
-    getLabel: function() { return this.model.el.getAttribute('data-label'); },
     getVal: function() { return this.model.el.value; },
     setVal: function(val) { this.model.el.value = val; if (this.model.children.length) { this.model.children[0].el.value = val; } },
     make: function() { return document.createElement('div'); },
@@ -86,30 +84,24 @@ window.$happy.Ext = window.$happy.Ext || {};
   };
 
 
-  //////// CONTROLLER /////////
-  function Controller() {}
-  Controller.prototype = {
-  };
-
-
   //////// HAPPY ELEMENT /////////
   function HappyElement(parent, opt) {
     opt = opt || {};
     this.parent = parent;
     this.$state = new State(this);
     this.$view  = new View(this);
-    this.controller = new Controller();
     if (opt.as) { extend(this, opt.as, 'deep'); delete opt.as; }
     if (this.opt.beforeInit) { if (this.opt.beforeInit(this, opt)) { return; }}
     this.opt = extend(this.opt || {}, opt); // Allows overriding ext options.
     this.el = this.getEl();
     this.id = this.opt.id || this.getId();
     this.childNodes = []; this.children = this.getChildren();
+    this.messageTypes = this.opt.messageTypes || this.getMessageTypes();
     this.$state.init({ value: this.opt.val ? this.$view.setVal(this.opt.val) : this.getVal() });
     if (this.opt.onInit) { this.opt.onInit(this); }
   }
   HappyElement.prototype = {
-    happyType: 'elm',
+    happyType: 'element',
     getO: function(opt, defaultVal) { return this.opt[opt] || defaultVal; },
     getId: function() { return this.el.id ? this.el.id : nextId(this.happyType); },
     getEl: function() { var el = this.getO('el'); if (el) { return el; }
@@ -121,6 +113,7 @@ window.$happy.Ext = window.$happy.Ext || {};
       this.children.forEach(function(child) { let val = child.getVal(); if (val === 0 || val) { cvs.push(val); } });
       return cvs.join('|'); } return this.$view.getVal();
     },
+    getParent: function(happyType) { var self = this.parent; while (self) { if (self.happyType === happyType) { return self; } self = self.parent; } },
     getChildren: function() {
       var children = [], self = this, $view = this.$view, defType = this.getO('defaultChildType'),
         childNodes = $view.findElAll(this.getO('childSelector'), this.el);
@@ -135,7 +128,20 @@ window.$happy.Ext = window.$happy.Ext || {};
       });
       return children;
     },
-    addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el); }
+    addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el); },
+    getMessageTypes: function() { var form = this.getParent('form') || this;
+      return { 'error': [this.el, '.error', 'append'], 'summary': [form.el, '.summary', 'before'] }; },
+    createMessages: function(reason, errors, opt) { var self = this;
+      errors.forEach(function(error) { self.messages.push(new Message(self, 'error', error, opt)); }); }
+  };
+
+
+  //////// HAPPY MESSAGE /////////
+  function Message(parent, type, text, opt) { this.info = parent.messageTypes[type]; this.text = text; this.opt = opt; this.$view = new View(this); }
+  Message.prototype = { happyType: 'message',
+    mount: function() { var anchorSelector = this.info[1], elContext = this.info[0], mountStyle = this.info[2], elMsg = this.$view.make(),
+      elAnchor = this.$view.findEl(anchorSelector, elContext, elContext); elMsg.className = this.opt.className || 'message ' + this.type;
+    elMsg.innerHTML = this.text; return this.$view.mount(elMsg, elAnchor, mountStyle); }
   };
 
 
@@ -174,6 +180,10 @@ window.$happy.Ext = window.$happy.Ext || {};
       window.console.log(this.happyType + '::validate(), errors =', this.errors);
       return this.errors;
     },
+    $view: {
+      getValidators: function() { return this.model.el.required ? [new Validator('required', ValidateRequired)] : []; },
+      getLabel: function() { return this.model.el.getAttribute('data-label'); }
+    }
   };
 
 
@@ -182,7 +192,8 @@ window.$happy.Ext = window.$happy.Ext || {};
     addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child; },
     opt: { selector: 'form', childSelector: '.field', defaultChildType: 'Field',
       beforeInit: function(self/*, origOpt*/) { extend(self, Validatable, 'deep'); },
-      onInit: function(self) { self.fields = {}; self.children.forEach(function(child) { self.fields[child.id] = child; }); console.log('Form::errors =', self.errors); },
+      onInit: function(self) { self.fields = {}; self.children.forEach(function(child) { self.fields[child.id] = child; }); 
+        window.console.log('Form::errors =', self.errors); },
     }
   };
 
@@ -199,12 +210,6 @@ window.$happy.Ext = window.$happy.Ext || {};
   //////// INPUT /////////
   var Input = { happyType: 'input',
     opt: { selector: '.input', beforeInit: function(self/*, origOpt*/) { extend(self, Validatable, 'deep'); } }
-  };
-
-
-  //////// MESSAGE /////////
-  var Message = {
-    happyType: 'message',
   };
 
 

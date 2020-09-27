@@ -57,8 +57,8 @@ Element.state::updateVal(reason, view) { view ? view.getVal() : Element.state::g
 Element.state::updateModified() { Element.state::getModified() + Element.parent::updateModified() }
 
 Element::validate(reason, event) {
-  Element.validators.forEach(validator=>validator.validate())
   Element.children.forEach(child=>child::validate(reason, event))
+  Element.validators.forEach(validator=>validator.validate())
   Element.parent::validate('childAsked')
 }
 
