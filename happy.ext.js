@@ -12,11 +12,8 @@ window.$happy = window.$happy || {};
 (function(F1, $happy) {
 
 
-  $happy.Ext = $happy.Ext || {};
-
-
-  //// RADIO INPUT
-  $happy.Ext.Radio = {
+  //// RADIO INPUT ////
+  $happy.Radio = $happy.extendPlugin($happy.Input, {
 
     happyType: 'radio',
 
@@ -24,11 +21,11 @@ window.$happy = window.$happy || {};
       getVal: function() { var elInput = this.model.el; return elInput.checked ? elInput.value : ''; }
     }
 
-  },
+  });
 
 
-  //// CHECKBOX INPUT
-  $happy.Ext.Checkbox = {
+  //// CHECKBOX INPUT ////
+  $happy.Checkbox = $happy.extendPlugin($happy.Input, {
 
     happyType: 'checkbox',
 
@@ -36,27 +33,27 @@ window.$happy = window.$happy || {};
       getVal: function() { var elInput = this.model.el; return elInput.checked ? elInput.value : ''; }
     }
 
-  },
+  });
 
 
-  //// CHECK LIST FIELD
-  $happy.Ext.CheckList = {
+  //// CHECK LIST FIELD ////
+  $happy.CheckList = $happy.extendPlugin($happy.Field, {
 
     happyType: 'checklist'
 
-  },
+  });
 
 
-  //// CHECK LIST FIELD
-  $happy.Ext.RadioList = {
+  //// RADIO LIST FIELD ////
+  $happy.RadioList = $happy.extendPlugin($happy.Field, {
 
     happyType: 'radiolist'
 
-  },
+  });
 
 
-  //// STREET ADDRESS FIELD
-  $happy.Ext.StreetAddress = {
+  //// STREET ADDRESS FIELD ////
+  $happy.StreetAddress = $happy.extendPlugin($happy.Field, {
 
     happyType: 'streetaddress',
 
@@ -167,11 +164,11 @@ window.$happy = window.$happy || {};
 
     }, // end view
 
-  }; // end: StreetAddress
+  }); // end: StreetAddress
 
 
-  //// NOTE FIELD
-  $happy.Ext.Note = {
+  //// NOTE FIELD ////
+  $happy.Note = $happy.extendPlugin($happy.Field, {
 
     happyType: 'note',
 
@@ -204,16 +201,7 @@ window.$happy = window.$happy || {};
 
     }, // end view
 
-  }; // end: Note
-
-
-  //// EXTEND HAPPY
-  $happy.CheckList = $happy.extend($happy.Field, $happy.Ext.CheckList);
-  $happy.RadioList = $happy.extend($happy.Field, $happy.Ext.RadioList);
-  $happy.Note = $happy.extend($happy.Field, $happy.Ext.Note);
-  $happy.StreetAddress = $happy.extend($happy.Field, $happy.Ext.StreetAddress);
-  $happy.Radio = $happy.extend($happy.Input, $happy.Ext.Radio);
-  $happy.Checkbox = $happy.extend($happy.Input, $happy.Ext.Checkbox);
+  }); // end: Note
 
 
 }(window.F1, window.$happy));
