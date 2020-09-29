@@ -48,8 +48,8 @@ window.$happy = window.$happy || {};
     set: function(key, val, init) { if (init) { this.initial[key] = val; } return this.data[key] = clone(val);  },
     reset: function(key) { return key ? this.data[key] = this.initial[key] : this.data = clone(this.initial); },
     init: function(data) { this.initial = data; return this.data = clone(data); },
+    update: function(/*reason, event, opts*/) {},
     getModified: function() { return this.isModified = isSame(this.data, this.initial); },
-    getHappy: function(reason, event) { var r = this.model.validate(reason, event); this.isHappy = !r; return r; },
     mapDataIn: function(data) { return data; },
     mapDataOut: function(data) { return data; },
     store: function(opts) { return opts; }, // opts.ajaxUrl or opts.localStorageKey
@@ -74,7 +74,7 @@ window.$happy = window.$happy || {};
     getVal: function() { return this.model.el.value; },
     setVal: function(val) { this.model.el.value = val; if (this.model.children.length) { this.model.children[0].el.value = val; } },
     make: function(id, className, tag) { var el = document.createElement(tag || 'div');
-      if (id) { el.id = id; } if (className) { el.className = className; } },
+      if (id) { el.id = id; } if (className) { el.className = className; } return el; },
     remove: function(el) { return this.el.parentElement.removeChild(el); },
     mount: function(elView, elAnchor, mountStyle) {
       elView = elView || this.make(); elAnchor = elAnchor || document.body;
@@ -83,17 +83,22 @@ window.$happy = window.$happy || {};
       case 'after': elAnchor.parentElement.insertBefore(elView, elAnchor.nextSibling); break;
       default: elAnchor.appendChild(elView); }
       return elView;
-    }
+    },
+    update: function(reason, event, opts) {
+      this.model.createMessages(reason, event, this.model.errors, opts);
+      this.model.messages.forEach(message => message.mount());
+      return this.model.$state.getModified();
+    },
   };
 
 
   //////// HAPPY MESSAGE /////////
   function Message(text, opts) { this.text = text; this.$view = new View(this); extend(this, opts); }
   Message.prototype = { happyType: 'message',
-    getAnchor: function(anchorSelector, elContext) { return this.$vew.findEl(anchorSelector, elContext, window.document); },
+    getAnchor: function(anchorSelector, elContext) { return this.$view.findEl(anchorSelector, elContext, window.document); },
     mount: function(elMsg, elAnchor, mountStyle) { elAnchor = elAnchor || this.getAnchor(this.anchorSelector, this.elContext);
       mountStyle = mountStyle || this.mountStyle; this.el = elMsg || this.$view.make(this.id, this.className || 'message');
-      elMsg.innerHTML = this.text; return this.$view.mount(elMsg, elAnchor, mountStyle); },
+      this.el.innerHTML = this.text; return this.$view.mount(this.el, elAnchor, mountStyle); },
     remove: function() { this.$view.remove(this.el); }
   };
 
@@ -160,8 +165,9 @@ window.$happy = window.$happy || {};
     addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el); },
     getMessageTypes: function() { var form = this.getParent('form') || this;
       return { 'error': [this.el, '.errors', 'append'], 'summary': [form.el, '.actions', 'before'] }; },
-    createMessages: function(reason, errors, opts) { var self = this;
-      errors.forEach(function(error) { self.messages.push(new Message(self, 'error', error, opts)); }); },
+    createMessages: function(reason, event, errors, opts) { var self = this;
+      errors.forEach(function(error) { self.messages.push( new Message( error.msg, { anchorSelector: opts.anchorSelector, elContext: self.el }) ); });
+    },
     triggerEvent: function(eventName, args) { var r, handlers = this[eventName] || {};
       for (var i in handlers) { var handler = handlers[i];
         if (typeof handler === 'function' && (r = handler.apply(this, args))) { return r; } }
@@ -176,7 +182,7 @@ window.$happy = window.$happy || {};
       this.validators.forEach(function(validator) { results.push(validator.validate(self, reason, event)); });
       // window.console.log(this.happyType + '::validate(), results =', results);
       results.forEach(function(result, i) { results[i] = self.parseValidateResult(result); });
-      return this.errors = results;
+      this.isHappy = !results; return this.errors = results;
     },
     parseValidateResult: function(result) { return result; },
     $view: {

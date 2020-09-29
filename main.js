@@ -23,8 +23,9 @@ form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMount: elQ2, mount
 form.onSubmit = function(elForm, event) {
 	console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', this);
 	event.preventDefault();
-	var res = this.$state.getHappy('check');
-	console.log('getHappy() Result:', res, ', isHappy:', this.$state.isHappy );
+	this.$state.update('onSubmit', event); // Update STATE using VIEW (User inputs)
+	this.validate     ('onSubmit', event); // Add validation errors if applicable
+	this.$view.update ('onSubmit', event, { anchorSelector: '.actions' }); // Render the NEW STATE
 }
 
 
