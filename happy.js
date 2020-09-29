@@ -27,7 +27,7 @@ window.$happy = window.$happy || {};
       else { objTarget[prop] = srcVal; } } return objTarget;
   }
 
-  function clone(obj) { if (!obj) { return obj; } return extend(new obj.constructor, obj, 'deep'); }
+  function clone(obj) { return obj ? extend(new obj.constructor, obj, 'deep') : obj; }
 
   function extendPlugin(plugin, extension) { return extend(clone(plugin), extension, 'deep'); }
 
@@ -49,7 +49,7 @@ window.$happy = window.$happy || {};
     reset: function(key) { return key ? this.data[key] = this.initial[key] : this.data = clone(this.initial); },
     init: function(data) { this.initial = data; return this.data = clone(data); },
     getModified: function() { return this.isModified = isSame(this.data, this.initial); },
-    getHappy: function(reason, event) { return this.model.validate ? this.model.validate(reason, event) : this.isHappy; },
+    getHappy: function(reason, event) { var r = this.model.validate(reason, event); this.isHappy = !r; return r; },
     mapDataIn: function(data) { return data; },
     mapDataOut: function(data) { return data; },
     store: function(opts) { return opts; }, // opts.ajaxUrl or opts.localStorageKey
@@ -73,7 +73,9 @@ window.$happy = window.$happy || {};
     },
     getVal: function() { return this.model.el.value; },
     setVal: function(val) { this.model.el.value = val; if (this.model.children.length) { this.model.children[0].el.value = val; } },
-    make: function() { return document.createElement('div'); },
+    make: function(id, className, tag) { var el = document.createElement(tag || 'div');
+      if (id) { el.id = id; } if (className) { el.className = className; } },
+    remove: function(el) { return this.el.parentElement.removeChild(el); },
     mount: function(elView, elAnchor, mountStyle) {
       elView = elView || this.make(); elAnchor = elAnchor || document.body;
       switch(mountStyle) {
@@ -85,6 +87,32 @@ window.$happy = window.$happy || {};
   };
 
 
+  //////// HAPPY MESSAGE /////////
+  function Message(text, opts) { this.text = text; this.$view = new View(this); extend(this, opts); }
+  Message.prototype = { happyType: 'message',
+    getAnchor: function(anchorSelector, elContext) { return this.$vew.findEl(anchorSelector, elContext, window.document); },
+    mount: function(elMsg, elAnchor, mountStyle) { elAnchor = elAnchor || this.getAnchor(this.anchorSelector, this.elContext);
+      mountStyle = mountStyle || this.mountStyle; this.el = elMsg || this.$view.make(this.id, this.className || 'message');
+      elMsg.innerHTML = this.text; return this.$view.mount(elMsg, elAnchor, mountStyle); },
+    remove: function() { this.$view.remove(this.el); }
+  };
+
+
+  /////// HAPPY VALIDATOR ////////
+  function Validator(id, props) {
+    this.id = id; this.validateFn = props.validateFn;
+    this.messageFn = props.messageFn || function () { return this.message = 'invalid'; };
+    this.altMessageFn = props.altMessageFn; // E.g. For summary display
+    this.argsFn = props.argsFn || function () { return props.args || []; };
+  }
+  Validator.prototype = { happyType: 'validator',
+    validate: function(model, reason, event) { return this.validateFn(model, reason, event); },
+    getMessage: function(model, reason, event) { return this.messageFn(model, reason, event); },
+    getAltMessage: function(model, reason, event) { return this.altMessageFn ? this.altMessageFn(model, reason, event): ''; },
+    getArgs: function(model, reason, event) { return this.argsFn(model, reason, event); }
+  };
+
+
   ////// HAPPY ELEMENT ///////
   function HappyElement(parent, opts) {
     opts = opts || {};
@@ -92,7 +120,6 @@ window.$happy = window.$happy || {};
     this.$state = new State(this);
     this.$view  = new View(this);
     if (opts.as) { extend(this, opts.as, 'deep'); delete opts.as; }
-    // window.console.log('init(), constructor opts:', opts, ', this:', this);
     if (this.triggerEvent('beforeInit', [opts])) { return; }
     this.opts = extend(this.opts || {}, opts); // Allows overriding ext optsions.
     this.el = this.getEl();
@@ -115,7 +142,8 @@ window.$happy = window.$happy || {};
       this.children.forEach(function(child) { let val = child.getVal(); if (val === 0 || val) { cvs.push(val); } });
       return cvs.join('|'); } return this.$view.getVal();
     },
-    getParent: function(happyType) { var self = this.parent; while (self) { if (self.happyType === happyType) { return self; } self = self.parent; } },
+    getParent: function(happyType) { var self = this.parent; while (self) {
+      if (self.happyType === happyType) { return self; } self = self.parent; } },
     getChildren: function() {
       var children = [], self = this, $view = this.$view, defType = this.getO('defaultChildType'),
         childNodes = $view.findElAll(this.getO('childSelector'), this.el);
@@ -134,52 +162,35 @@ window.$happy = window.$happy || {};
       return { 'error': [this.el, '.errors', 'append'], 'summary': [form.el, '.actions', 'before'] }; },
     createMessages: function(reason, errors, opts) { var self = this;
       errors.forEach(function(error) { self.messages.push(new Message(self, 'error', error, opts)); }); },
-    triggerEvent: function(eventName, args) { var handlers = this[eventName] || {};
+    triggerEvent: function(eventName, args) { var r, handlers = this[eventName] || {};
       for (var i in handlers) { var handler = handlers[i];
         if (typeof handler === 'function' && (r = handler.apply(this, args))) { return r; } }
     }
   };
 
 
-  //////// MESSAGE /////////
-  function Message(parent, type, text, opts) { this.info = parent.messageTypes[type]; this.text = text; this.opts = opts; this.$view = new View(this); }
-  Message.prototype = { happyType: 'message',
-    mount: function() { var anchorSelector = this.info[1], elContext = this.info[0], mountStyle = this.info[2], elMsg = this.$view.make(),
-      elAnchor = this.$view.findEl(anchorSelector, elContext, elContext); elMsg.className = this.opts.className || 'message ' + this.type;
-    elMsg.innerHTML = this.text; return this.$view.mount(elMsg, elAnchor, mountStyle); }
-  };
-
-
-  /////// VALIDATOR ////////
-  function Validator(id, props) {
-    this.id = id; this.validateFn = props.validateFn;
-    this.messagesFn = props.messagesFn || function () { return ['invalid']; };
-    this.summaryMessagesFn = props.summaryMessagesFn || this.messagesFn;
-    this.argsFn = props.argsFn || function () { return props.args || {}; };
-  }
-  Validator.prototype = { modelType: 'validator',
-    validate: function(model, reason, event) { return this.validateFn(model, reason, event); },
-    getMessages: function(model, reason, event) { return this.messagesFn(model, reason, event); },
-    getSummaryMessages: function(model, reason, event) { return this.summaryMessagesFn(model, reason, event); },
-    getArgs: function(model, reason, event) { return this.argsFn(model, reason, event); }
-  };
-
-
   ////// VALIDATABLE ///////
   var Validatable = { happyType: 'validatable', validators: [], errors: [], messages: [],
-    validate: function(reason, event) { var self = this, errors = [], childErrors = [];
-      // window.console.log(this.happyType + '::validate(), reason:', reason, ', event:', event);
-      this.children.forEach(function(child){ if (child.validate) { childErrors = child.validate(reason, event); } });
-      // window.console.log(this.happyType + '::validate(), validators =', this.validators);
-      this.validators.forEach(function(validator) { errors = errors.concat(validator.validate(self, reason, event)); });
-      // window.console.log(this.happyType + '::validate(), currentErrors =', this.errors, ', childErrors =', childErrors, ', newErrors =', errors);
-      this.errors = this.errors.concat(childErrors, errors);
-      window.console.log(this.happyType + '::validate(), errors =', this.errors);
-      return this.errors;
+    validate: function(reason, event) { var self = this, results = [];
+      this.children.forEach(function(child){ if (child.validate) { results = results.concat(child.validate(reason, event)); } });
+      this.validators.forEach(function(validator) { results.push(validator.validate(self, reason, event)); });
+      // window.console.log(this.happyType + '::validate(), results =', results);
+      results.forEach(function(result, i) { results[i] = self.parseValidateResult(result); });
+      return this.errors = results;
     },
+    parseValidateResult: function(result) { return result; },
     $view: {
-      getValidators: function() { return this.model.el.required ? [new Validator('required', Required)] : []; },
-      getLabel: function() { return this.model.el.getAttribute('data-label'); }
+      isLabel: function(el) { return el && el.nodeName === 'LABEL'; },
+      getLabel: function() {
+        var model = this.model, el = model.el, elParent = model.parent ? model.parent.el : el.parentElement, elLabel;
+        if (model.happyType === 'input') { elLabel = this.isLabel(el.previousElementSibling) ? el.previousElementSibling
+          : (this.isLabel(el.nextElementSibling) ? el.nextElementSibling : elParent.querySelector('label')); }
+        else { elLabel = this.isLabel(el.firstElementChild) ? el.firstElementChild : el.querySelector('label'); }
+        model.label = elLabel ? elLabel.innerHTML : el.getAttribute('data-label');
+        // window.console.log('gelLabel(), label:', model.label, ', elLabel:', elLabel, ', elParent:', elParent, ', el:', el);
+        return model.label;
+      },
+      getValidators: function() { return this.model.el.required ? [new Validator('required', Required)] : []; }
     },
     onInit: { validatable: function() { this.validators = this.getO('validators') || this.$view.getValidators(); } }
   };
@@ -207,8 +218,10 @@ window.$happy = window.$happy || {};
 
   ////// REQUIRED ///////
   var Required = {
-    validateFn: function(model) { var val = model.$state.get('value') + ''; return val.length > 0 ? this.getMessages(model) : []; },
-    messagesFn : function(model) { var label = model.$view.getLabel(); return [label ? label + ' is required.' : 'required']; }
+    validateFn: function(model) { var val = model.$state.get('value') || ''; if (!val && val !== 0) {
+      var msg = this.getMessage(model); return { owner: model, msg, altMsg: this.getAltMessage(model) || msg, val }; } },
+    messageFn : function(model) { var label = model.$view.getLabel();
+      return (label ? label : model.happyType) + ' is required.'; }
   };
 
 
