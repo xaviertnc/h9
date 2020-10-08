@@ -14,7 +14,7 @@
       margin: 0;
       color: crimson;
     }
-    .field, .input-container {
+    .field, fieldset > .input-container {
       margin: 1rem 0;
     }
     .input-group label {
@@ -32,6 +32,20 @@
       margin-top: 2rem;
       padding: 1rem;
     }
+    .show-if-unhappy {
+      color: red;
+      display: none;
+    }
+    .unhappy > .show-if-unhappy {
+      display: block;
+    }
+    .show-if-modified {
+      color: green;
+      display: none;
+    }
+    .modified > .show-if-modified {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -41,6 +55,8 @@
   <hr>
   <main>
     <form method="POST" onsubmit="form.onSubmit(this, event)" novalidate>
+      <div class="show-if-unhappy">* Form Is Unhappy *</div>
+      <div class="show-if-modified">* Form Is Modified *</div>
       <div class="field required">
         <label>Field 1</label>
         <div class="input-container">

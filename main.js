@@ -14,18 +14,19 @@ console.log('$happy:', $happy);
 
 //// APPLICATION
 var elQ2 = document.getElementById('question_2');
-var streetAddress = { street: 'My Street', suburb: 'My Suburb', city: 'My City' };
+var streetAddress = { street: 'My Street', suburb: 'My Suburb', city: 'My City', code: '127' };
 var form = new $happy.HappyElement(F1, { as: $happy.Form });
 
 form.addEl(new $happy.HappyElement(form, { as: $happy.StreetAddress, elMount: elQ2, mountStyle: 'before', selector: null, val: streetAddress }));
 form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMount: elQ2, mountStyle: 'after', selector: null, val: 'Hello World!' }));
 
 form.onSubmit = function(elForm, event) {
-	console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', this);
 	event.preventDefault();
-	this.$state.update('onSubmit', event); // Update STATE using VIEW (User inputs)
-	this.validate     ('onSubmit', event); // Add validation errors if applicable
-	this.$view.update ('onSubmit', event, { anchorSelector: '.actions' }); // Render the NEW STATE
+	console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', this);
+	// Update STATE values using VIEW (User inputs), then validate updated values.
+	this.$state.update('onSubmit', event, {});
+	// Render the NEW STATE based on validation results.
+	this.$view.update('onSubmit', event, { anchorSelector: '.actions' });
 }
 
 

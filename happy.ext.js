@@ -18,7 +18,24 @@ window.$happy = window.$happy || {};
     happyType: 'radio',
 
     $view: {
-      getVal: function() { var elInput = this.model.el; return elInput.checked ? elInput.value : ''; }
+      setVal: function(val) { console.log('Radio.$view::setVal(), id:', this.model.id, ', val =', val); this.model.el.checked = (this.model.el.value == val); return val; },
+      getVal: function() { var elInput = this.model.el, val = elInput.checked ? elInput.value : undefined;
+        console.log('Radio.$view::getVal(), id:', this.model.id, ', val =', val); return val; }
+    }
+
+  });
+
+
+  //// RADIO LIST FIELD ////
+  $happy.RadioList = $happy.extendPlugin($happy.Field, {
+
+    happyType: 'radiolist',
+
+    $state: {
+      getVal: function(defaultVal) { var val = undefined, children = this.model.children;
+        children.forEach(function(child){ var v = child.$state.getVal(); if (v !== undefined) { val = v; return false; } }); 
+        console.log('RadioList.$state::getVal(), id:', this.model.id, ', val =', val);
+        return val; },
     }
 
   });
@@ -30,7 +47,9 @@ window.$happy = window.$happy || {};
     happyType: 'checkbox',
 
     $view: {
-      getVal: function() { var elInput = this.model.el; return elInput.checked ? elInput.value : ''; }
+      setVal: function(val) { console.log('Checkbox.$view::setVal(), id:', this.model.id, ', val =', val); this.model.el.checked = !!val; },
+      getVal: function() { var elInput = this.model.el, val = elInput.checked ? elInput.value : undefined;
+        console.log('Checkbox.$view::getVal(), id:', this.model.id, ', val =', val); return val; }
     }
 
   });
@@ -39,15 +58,11 @@ window.$happy = window.$happy || {};
   //// CHECK LIST FIELD ////
   $happy.CheckList = $happy.extendPlugin($happy.Field, {
 
-    happyType: 'checklist'
+    happyType: 'checklist',
 
-  });
-
-
-  //// RADIO LIST FIELD ////
-  $happy.RadioList = $happy.extendPlugin($happy.Field, {
-
-    happyType: 'radiolist'
+    $view: {
+      setVal: function(val) { this.model.children.forEach(function(child) { child.$view.setVal(val[child.id]); }); return val; },
+    }
 
   });
 
@@ -57,40 +72,40 @@ window.$happy = window.$happy || {};
 
     happyType: 'streetaddress',
 
-    $state: {
 
-      init: function(data) {
-        var field = this.model, val = data.value;
-        field.children[0].$state.init({ value: val.street });
-        field.children[1].$state.init({ value: val.suburb });
-        field.children[2].$state.init({ value: val.city   });
-        this.initial = data; return this.data = $happy.clone(data);
-      },
-
-      reset: function(key) {
-        this.model.children.forEach(function(child) { child.$state.reset(key); });
-        return key ? this.data[key] = this.initial[key] : this.data = $happy.clone(this.initial);
-      }
-
+    reset: function(key) {
+      this.model.children.forEach(function(child) { child.$state.reset(key); });
+      return key ? this.data[key] = this.initial[key] : this.data = $happy.clone(this.initial);
     },
+
 
     $view: {
 
       setVal: function(val) {
-        var field = this.model;
-        field.children[0].$view.setVal(val.street);
-        field.children[1].$view.setVal(val.suburb);
-        field.children[2].$view.setVal(val.city);
+        var children = this.model.children;
+        console.log('StreetAddr.$view.setVal(), val =', val);
+        val = val ? val : { street: '', suburb: '', city: '', code: '' };
+        children[0].$view.setVal(val.street);
+        children[1].$view.setVal(val.suburb);
+        children[2].$view.setVal(val.city);
+        children[3].$view.setVal(val.code);
         return val; // important!
       },
 
-      getVal: function(val) {
-        var field = this.model;
-        val.street = field.children[0].$view.getVal('value');
-        val.suburb = field.children[1].$view.getVal('value');
-        val.city   = field.children[2].$view.getVal('value');
-        return val;
-      },
+//       getVal: function(reason, event, opts) {
+//         var children = this.model.children, val = {};
+//         if (reason !== 'childAsked') {
+//           children[0].$state.set('value', children[0].$view.getVal('parentAsked', event, opts));
+//           children[1].$state.set('value', children[1].$view.getVal('parentAsked', event, opts));
+//           children[2].$state.set('value', children[2].$view.getVal('parentAsked', event, opts));
+//           children[3].$state.set('value', children[3].$view.getVal('parentAsked', event, opts));
+//         }
+//         val.street = children[0].$state.get('value');
+//         val.suburb = children[1].$state.get('value');
+//         val.city   = children[2].$state.get('value');
+//         val.code   = children[3].$state.get('value');
+//         return val;
+//       },
 
       make: function() {
 
