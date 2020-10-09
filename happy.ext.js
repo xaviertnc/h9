@@ -32,7 +32,7 @@ window.$happy = window.$happy || {};
     happyType: 'radiolist',
 
     $state: {
-      getVal: function(defaultVal) { var val = undefined, children = this.model.children;
+      genVal: function(/*deep*/) { var val = undefined, children = this.model.children;
         children.forEach(function(child){ var v = child.$state.getVal(); if (v !== undefined) { val = v; return false; } }); 
         console.log('RadioList.$state::getVal(), id:', this.model.id, ', val =', val);
         return val; },

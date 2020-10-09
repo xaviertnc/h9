@@ -21,12 +21,14 @@ form.addEl(new $happy.HappyElement(form, { as: $happy.StreetAddress, elMount: el
 form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMount: elQ2, mountStyle: 'after', selector: null, val: 'Hello World!' }));
 
 form.onSubmit = function(elForm, event) {
-	event.preventDefault();
-	console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', this);
-	// Update STATE values using VIEW (User inputs), then validate updated values.
-	this.$state.update('onSubmit', event, {});
-	// Render the NEW STATE based on validation results.
-	this.$view.update('onSubmit', event, { anchorSelector: '.actions' });
+  event.preventDefault();
+  console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', this);
+  this.$state.updateVal('deep');
+  this.$state.updateModified('deep');
+  this.$state.setErrors(this.validate('onSubmit', event/*, opts*/));
+  this.$view.renderHappy(this.$state.get('isHappy', true));
+  this.$view.renderModified(this.$state.get('isModified', false));
+  this.$view.renderMessages(this.$state.getErrors());
 }
 
 
