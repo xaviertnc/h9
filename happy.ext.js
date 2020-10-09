@@ -20,7 +20,8 @@ window.$happy = window.$happy || {};
     $view: {
       setVal: function(val) { console.log('Radio.$view::setVal(), id:', this.model.id, ', val =', val); this.model.el.checked = (this.model.el.value == val); return val; },
       getVal: function() { var elInput = this.model.el, val = elInput.checked ? elInput.value : undefined;
-        console.log('Radio.$view::getVal(), id:', this.model.id, ', val =', val); return val; }
+        //console.log('Radio.$view::getVal(), id:', this.model.id, ', val =', val);
+        return val; }
     }
 
   });
@@ -34,7 +35,7 @@ window.$happy = window.$happy || {};
     $state: {
       genVal: function(/*deep*/) { var val = undefined, children = this.model.children;
         children.forEach(function(child){ var v = child.$state.getVal(); if (v !== undefined) { val = v; return false; } }); 
-        console.log('RadioList.$state::getVal(), id:', this.model.id, ', val =', val);
+        //console.log('RadioList.$state::getVal(), id:', this.model.id, ', val =', val);
         return val; },
     }
 
@@ -47,9 +48,12 @@ window.$happy = window.$happy || {};
     happyType: 'checkbox',
 
     $view: {
-      setVal: function(val) { console.log('Checkbox.$view::setVal(), id:', this.model.id, ', val =', val); this.model.el.checked = !!val; },
+      setVal: function(val) { this.model.el.checked = !!val;
+        //console.log('Checkbox.$view::setVal(), id:', this.model.id, ', val =', val);
+      },
       getVal: function() { var elInput = this.model.el, val = elInput.checked ? elInput.value : undefined;
-        console.log('Checkbox.$view::getVal(), id:', this.model.id, ', val =', val); return val; }
+        //console.log('Checkbox.$view::getVal(), id:', this.model.id, ', val =', val);
+        return val; },
     }
 
   });
@@ -61,7 +65,9 @@ window.$happy = window.$happy || {};
     happyType: 'checklist',
 
     $view: {
-      setVal: function(val) { this.model.children.forEach(function(child) { child.$view.setVal(val[child.id]); }); return val; },
+      setVal: function(val) {
+        this.model.children.forEach(function(child) { child.$view.setVal(val[child.id]); });
+        return val; },
     }
 
   });
@@ -79,33 +85,37 @@ window.$happy = window.$happy || {};
     },
 
 
+    $state: {
+      genVal: function(/*deep*/) {
+        var val = this.getVal();
+        console.log('StreetAddr.$state.genVal(), val =', val);
+        return val;
+      },
+    },
+
+
     $view: {
 
-      setVal: function(val) {
+      setVal: function(val/*, deep*/) {
         var children = this.model.children;
-        console.log('StreetAddr.$view.setVal(), val =', val);
         val = val ? val : { street: '', suburb: '', city: '', code: '' };
-        children[0].$view.setVal(val.street);
-        children[1].$view.setVal(val.suburb);
-        children[2].$view.setVal(val.city);
-        children[3].$view.setVal(val.code);
+        children[0].$view.setVal(this.format(val.street));
+        children[1].$view.setVal(this.format(val.suburb));
+        children[2].$view.setVal(this.format(val.city));
+        children[3].$view.setVal(this.format(val.code));
+        console.log('StreetAddr.$view.setVal(), val =', val);
         return val; // important!
       },
 
-//       getVal: function(reason, event, opts) {
-//         var children = this.model.children, val = {};
-//         if (reason !== 'childAsked') {
-//           children[0].$state.set('value', children[0].$view.getVal('parentAsked', event, opts));
-//           children[1].$state.set('value', children[1].$view.getVal('parentAsked', event, opts));
-//           children[2].$state.set('value', children[2].$view.getVal('parentAsked', event, opts));
-//           children[3].$state.set('value', children[3].$view.getVal('parentAsked', event, opts));
-//         }
-//         val.street = children[0].$state.get('value');
-//         val.suburb = children[1].$state.get('value');
-//         val.city   = children[2].$state.get('value');
-//         val.code   = children[3].$state.get('value');
-//         return val;
-//       },
+      getVal: function() {
+        var children = this.model.children, val = {
+          street: this.parse(children[0].$view.getVal()),
+          suburb: this.parse(children[1].$view.getVal()),
+          city  : this.parse(children[2].$view.getVal()),
+          code  : this.parse(children[3].$view.getVal()) };
+        console.log('StreetAddr.$view.getVal(), val =', val);
+        return val;
+      },
 
       make: function() {
 

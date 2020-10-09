@@ -53,12 +53,12 @@ window.$happy = window.$happy || {};
       if (children.length === 0) { val = this.get('value', defaultVal); }
       else if (children.length === 1) { val = children[0].$state.getVal(); }
       else { val = {}; children.forEach(function(ch){ val[ch.id] = deep ? ch.$state.genVal() : ch.$state.getVal(); }); }
-      console.log('$state::genVal(), id:', this.model.id, ', deep:', deep, ', val =', val);
+      //console.log('$state::genVal(), id:', this.model.id, ', deep:', deep, ', val =', val);
       return val; },
     genHappy: function(deep) {},
     genErrors: function(deep) {},
     genModified: function(deep) { var i, modified, children = this.model.children;
-     console.log('$state.genModified(), deep:', deep, ', id:', this.model.id);
+     //console.log('$state.genModified(), deep:', deep, ', id:', this.model.id);
      if (children.length === 0) { return ! isSame(this.get('value'), this.get('initVal')); }
      for (i in children) { var ch = children[i], modified = deep ? ch.$state.genModified(deep)
        : ch.$state.get('isModified'); return modified; } },
@@ -67,7 +67,7 @@ window.$happy = window.$happy || {};
     getErrors: function() { return this.get('errors', []); },
     getModified: function() { return this.get('isModified', false); },
     setVal: function(val, init) { if (init) { this.set('initVal', val); }
-      console.log('$state::setVal(), id:', this.model.id, ', val =', val, ', init =', init);
+      //console.log('$state::setVal(), id:', this.model.id, ', val =', val, ', init =', init);
       return this.set('value', init ? copy(val) : val); },
     setHappy: function(val, init) { return this.set('isHappy', val, init); },
     setErrors: function(errors, init) { return this.set('errors', errors || [], init); },
@@ -94,7 +94,7 @@ window.$happy = window.$happy || {};
     getVal: function() { var val = {}, model = this.model;
       if (model.children.length > 1) { model.children.forEach(function(child){ val[child.id] = child.$view.getVal(); }); }
       else { val = model.children.length ? model.children[0].$view.getVal() : this.parse(model.el.value); }
-      console.log('$view::getVal(), id:', model.id, ', val =', val);
+      //console.log('$view::getVal(), id:', model.id, ', val =', val);
       return val; },
     getType: function(el, defaultType) {
       var type = el.getAttribute('data-type'); if (type) { return type; }
@@ -114,7 +114,7 @@ window.$happy = window.$happy || {};
         if ( ! children.length) { this.model.el.value = this.format(val?val:''); }
         else if (deep && children.length === 1) { children[0].$view.setVal(this.format(val?val:'')); }
         else if (deep) { children.forEach(function(child) { child.$view.setVal(self.format(val?val[child.id]:'')); }); }
-      console.log('view::setVal(), id:', this.model.id, ', val =', val);
+      //console.log('view::setVal(), id:', this.model.id, ', val =', val);
       return val; },
     renderHappy: function(isHappy) { this.model.el.classList.toggle('unhappy', !isHappy); },
     renderModified: function(isModified) { this.model.el.classList.toggle('modified', isModified); },
@@ -151,7 +151,7 @@ window.$happy = window.$happy || {};
 
   ////// HAPPY ELEMENT ///////
   function HappyElement(parent, opts) {
-    console.log('Construct Happy Element! opts:', opts);
+    //console.log('Construct Happy Element! opts:', opts);
     opts = opts || {};
     this.parent = parent || {};
     this.$state = new State(this);
@@ -172,7 +172,7 @@ window.$happy = window.$happy || {};
   HappyElement.prototype = {
     happyType: 'element',
     getO: function(opts, defaultVal) { return this.opts[opts] || defaultVal; },
-    getId: function() { return this.el.id ? this.el.id : nextId(this.happyType); },
+    getId: function() { return this.el.id ? this.el.id : (this.opts.index ? this.happyType+'_'+this.opts.index : nextId(this.happyType)); },
     getEl: function() { var el = this.getO('el'); if (el) { return el; }
       var selector = this.getO('selector'), elContext = this.parent.el || document.body;
       if (selector) { return this.$view.findEl(selector, elContext); }
@@ -183,8 +183,8 @@ window.$happy = window.$happy || {};
     getChildren: function() {
       var children = [], self = this, $view = this.$view, defType = this.getO('defaultChildType'),
         childNodes = $view.findElAll(this.getO('childSelector'), this.el);
-      childNodes.forEach(function(elChild) {
-        var child, childType = $view.getType(elChild, defType), opts = { el: elChild };
+      childNodes.forEach(function(elChild, i) {
+        var child, childType = $view.getType(elChild, defType), opts = { el: elChild, index: i+1 };
         if ($happy[childType]) { opts.as = $happy[childType]; }
         else if ($happy[defType]) { opts.as = $happy[defType]; }
         child = new HappyElement(self, opts);
@@ -202,8 +202,7 @@ window.$happy = window.$happy || {};
     triggerEvent: function(eventName, args) { var r, handlers = this[eventName] || {};
       for (var i in handlers) { var handler = handlers[i];
         if (typeof handler === 'function' && (r = handler.apply(this, args))) { return r; } } },
-    addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el);
-      self.$state.updateVal(); },
+    addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el); },
   };
 
 
@@ -236,7 +235,8 @@ window.$happy = window.$happy || {};
 
   //////// FORM /////////
   var Form = extendPlugin(Validatable, { happyType: 'form',
-    addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child; },
+    addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child;
+      this.$state.setVal(this.$state.genVal(), 'init'); },
     opts: { selector: 'form', childSelector: '.field', defaultChildType: 'Field' },
     onInit: { form: function() { var self = this; this.fields = {}; this.children.forEach(function(child) { self.fields[child.id] = child; });
       window.console.log('Form::errors =', self.errors); } }
