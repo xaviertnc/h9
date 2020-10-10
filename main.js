@@ -21,14 +21,17 @@ form.addEl(new $happy.HappyElement(form, { as: $happy.StreetAddress, elMount: el
 form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMount: elQ2, mountStyle: 'after', selector: null, val: 'Hello World!' }));
 
 form.onSubmit = function(elForm, event) {
+  var frm = this;
   event.preventDefault();
-  console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', this);
-  this.$state.updateVal('deep');
-  this.$state.updateModified('deep');
-  this.$state.setErrors(this.validate('onSubmit', event/*, opts*/));
-  this.$view.renderHappy(this.$state.get('isHappy', true));
-  this.$view.renderModified(this.$state.get('isModified', false));
-  this.$view.renderMessages(this.$state.getErrors());
+  console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', frm);
+  frm.$state.updateVal('onSubmit', event);
+  frm.$state.updateModified('onSubmit', event);
+  frm.$state.updateHappy('onSubmit', event);
+  frm.$view.updateHappy(frm.$state.getHappy());
+  frm.$view.updateModified(frm.$state.getModified());
+  frm.$view.updateMessages(frm.$state.getMessages());
+//   if (frm.parent && this.parent.getHappy) { this.parent.getHappy('childAsked', event, opts); }
+
 }
 
 

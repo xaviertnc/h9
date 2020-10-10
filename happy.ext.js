@@ -13,60 +13,64 @@ window.$happy = window.$happy || {};
 
 
   //// RADIO INPUT ////
-  $happy.Radio = $happy.extendPlugin($happy.Input, {
+  $happy.Radio = $happy.extendCloneOf($happy.Input, {
 
     happyType: 'radio',
 
     $view: {
-      setVal: function(val) { console.log('Radio.$view::setVal(), id:', this.model.id, ', val =', val); this.model.el.checked = (this.model.el.value == val); return val; },
-      getVal: function() { var elInput = this.model.el, val = elInput.checked ? elInput.value : undefined;
+      getVal: function() {
+        var elInput = this.model.el, val = elInput.checked ? elInput.value : undefined;
         //console.log('Radio.$view::getVal(), id:', this.model.id, ', val =', val);
-        return val; }
+        return val; },
+      renderVal: function(val) {
+        console.log('Radio.$view::renderVal(), id:', this.model.id, ', val =', val);
+        this.model.el.checked = (this.model.el.value == val);
+        return val; },
     }
 
   });
 
 
   //// RADIO LIST FIELD ////
-  $happy.RadioList = $happy.extendPlugin($happy.Field, {
+  $happy.RadioList = $happy.extendCloneOf($happy.Field, {
 
     happyType: 'radiolist',
 
-    $state: {
-      genVal: function(/*deep*/) { var val = undefined, children = this.model.children;
-        children.forEach(function(child){ var v = child.$state.getVal(); if (v !== undefined) { val = v; return false; } }); 
-        //console.log('RadioList.$state::getVal(), id:', this.model.id, ', val =', val);
-        return val; },
-    }
+    getValue: function(reason, event, opts) { var val, children = this.children, i, n = children.length;
+      for(i = 0; i < n; i++) { var c = children[i], v = c.getValue(reason, event, opts);
+        if (typeof v !== 'undefined') { val = v; break; } };
+      //console.log('RadioList.$state::getVal(), id:', this.model.id, ', val =', val);
+      return val;
+    },
 
   });
 
 
   //// CHECKBOX INPUT ////
-  $happy.Checkbox = $happy.extendPlugin($happy.Input, {
+  $happy.Checkbox = $happy.extendCloneOf($happy.Input, {
 
     happyType: 'checkbox',
 
     $view: {
-      setVal: function(val) { this.model.el.checked = !!val;
-        //console.log('Checkbox.$view::setVal(), id:', this.model.id, ', val =', val);
-      },
       getVal: function() { var elInput = this.model.el, val = elInput.checked ? elInput.value : undefined;
         //console.log('Checkbox.$view::getVal(), id:', this.model.id, ', val =', val);
         return val; },
+      renderVal: function(val) { this.model.el.checked = !!val;
+        //console.log('Checkbox.$view::renderVal(), id:', this.model.id, ', val =', val);
+      },
     }
 
   });
 
 
   //// CHECK LIST FIELD ////
-  $happy.CheckList = $happy.extendPlugin($happy.Field, {
+  $happy.CheckList = $happy.extendCloneOf($happy.Field, {
 
     happyType: 'checklist',
 
     $view: {
-      setVal: function(val) {
-        this.model.children.forEach(function(child) { child.$view.setVal(val[child.id]); });
+      renderVal: function(val) {
+        this.model.children.forEach(function(child) { child.$view.renderVal(val[child.id]); });
         return val; },
     }
 
@@ -74,7 +78,7 @@ window.$happy = window.$happy || {};
 
 
   //// STREET ADDRESS FIELD ////
-  $happy.StreetAddress = $happy.extendPlugin($happy.Field, {
+  $happy.StreetAddress = $happy.extendCloneOf($happy.Field, {
 
     happyType: 'streetaddress',
 
@@ -85,27 +89,38 @@ window.$happy = window.$happy || {};
     },
 
 
+    // NB: We don't need to re-define getValue, setVal, getVal if we stick to conventions
+    // and give children ID's that match the value object's keys!
+    // StreetAddress is done differently just to demonstrate what's possible.
+    getValue: function(reason, event, opts) {
+      var children = this.children, deep = reason !== 'childAsked', val = {
+        street: deep ? children[0].getValue(reason, event, opts) : children[0].$state.getVal(children[0].defaultVal),
+        suburb: deep ? children[1].getValue(reason, event, opts) : children[1].$state.getVal(children[1].defaultVal),
+        city  : deep ? children[2].getValue(reason, event, opts) : children[2].$state.getVal(children[2].defaultVal),
+        code  : deep ? children[3].getValue(reason, event, opts) : children[3].$state.getVal(children[3].defaultVal) };
+      //console.log('StreetAddr.getValue(), val =', val, ', reason:', reason);
+      return val;
+    },
+
+
     $state: {
-      genVal: function(/*deep*/) {
-        var val = this.getVal();
-        console.log('StreetAddr.$state.genVal(), val =', val);
+
+      setVal: function(val, init) {
+        var children = this.model.children;
+        val = val ? val : { street: '', suburb: '', city: '', code: '' };
+        if (init) { this.set('initVal', val); val = $happy.copy(val); }
+        children[0].$state.setVal(val.street, init);
+        children[1].$state.setVal(val.suburb, init);
+        children[2].$state.setVal(val.city, init);
+        children[3].$state.setVal(val.code, init);
+        this.set('value', val);
         return val;
-      },
+      }
+
     },
 
 
     $view: {
-
-      setVal: function(val/*, deep*/) {
-        var children = this.model.children;
-        val = val ? val : { street: '', suburb: '', city: '', code: '' };
-        children[0].$view.setVal(this.format(val.street));
-        children[1].$view.setVal(this.format(val.suburb));
-        children[2].$view.setVal(this.format(val.city));
-        children[3].$view.setVal(this.format(val.code));
-        console.log('StreetAddr.$view.setVal(), val =', val);
-        return val; // important!
-      },
 
       getVal: function() {
         var children = this.model.children, val = {
@@ -113,8 +128,19 @@ window.$happy = window.$happy || {};
           suburb: this.parse(children[1].$view.getVal()),
           city  : this.parse(children[2].$view.getVal()),
           code  : this.parse(children[3].$view.getVal()) };
-        console.log('StreetAddr.$view.getVal(), val =', val);
+        //console.log('StreetAddr.$view.getVal(), val =', val);
         return val;
+      },
+
+      renderVal: function(val) {
+        var children = this.model.children;
+        val = val ? val : { street: '', suburb: '', city: '', code: '' };
+        children[0].$view.renderVal(this.format(val.street));
+        children[1].$view.renderVal(this.format(val.suburb));
+        children[2].$view.renderVal(this.format(val.city));
+        children[3].$view.renderVal(this.format(val.code));
+        //console.log('StreetAddr.$view.renderVal(), val =', val);
+        return val; // important!
       },
 
       make: function() {
@@ -193,7 +219,7 @@ window.$happy = window.$happy || {};
 
 
   //// NOTE FIELD ////
-  $happy.Note = $happy.extendPlugin($happy.Field, {
+  $happy.Note = $happy.extendCloneOf($happy.Field, {
 
     happyType: 'note',
 

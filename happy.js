@@ -31,7 +31,7 @@ window.$happy = window.$happy || {};
 
   function copy(val) { return isExtendable(val) ? ( val.constructor === Object ? clone(val) : val.slice(0) ) : val; }
 
-  function extendPlugin(plugin, extension) { return extend(clone(plugin), extension, 'deep'); }
+  function extendCloneOf(obj, extension) { return extend(clone(obj), extension, 'deep'); }
 
   function upperFirst(string) { return string[0].toUpperCase() + string.slice(1); }
 
@@ -49,33 +49,6 @@ window.$happy = window.$happy || {};
     get: function(key, defaultVal) { return this.data[key] || defaultVal; },
     set: function(key, val) { return this.data[key] = val; },
     reset: function(key) { return key ? this.data[key] = copy(this.initial[key]) : this.data = copy(this.initial); },
-    genVal: function(deep) { var val, children = this.model.children;
-      if (children.length === 0) { val = this.get('value', defaultVal); }
-      else if (children.length === 1) { val = children[0].$state.getVal(); }
-      else { val = {}; children.forEach(function(ch){ val[ch.id] = deep ? ch.$state.genVal() : ch.$state.getVal(); }); }
-      //console.log('$state::genVal(), id:', this.model.id, ', deep:', deep, ', val =', val);
-      return val; },
-    genHappy: function(deep) {},
-    genErrors: function(deep) {},
-    genModified: function(deep) { var i, modified, children = this.model.children;
-     //console.log('$state.genModified(), deep:', deep, ', id:', this.model.id);
-     if (children.length === 0) { return ! isSame(this.get('value'), this.get('initVal')); }
-     for (i in children) { var ch = children[i], modified = deep ? ch.$state.genModified(deep)
-       : ch.$state.get('isModified'); return modified; } },
-    getVal: function(defaultVal) { return this.get('value', defaultVal); },
-    getHappy: function() { return this.get('isHappy', true); },
-    getErrors: function() { return this.get('errors', []); },
-    getModified: function() { return this.get('isModified', false); },
-    setVal: function(val, init) { if (init) { this.set('initVal', val); }
-      //console.log('$state::setVal(), id:', this.model.id, ', val =', val, ', init =', init);
-      return this.set('value', init ? copy(val) : val); },
-    setHappy: function(val, init) { return this.set('isHappy', val, init); },
-    setErrors: function(errors, init) { return this.set('errors', errors || [], init); },
-    setModified: function(val, init) { return this.set('isModified', val, init); },
-    updateVal: function(deep) { this.setVal(this.genVal(deep)); },
-    updateHappy: function(deep) { this.setHappy(this.genHappy(deep)); },
-    updateErrors: function(deep) { this.setErrors(this.genErrors(deep)); },
-    updateModified: function(deep) { this.setModifieid(this.genModified(deep)); },
     mapDataIn: function(data) { return data; },
     mapDataOut: function(data) { return data; },
     store: function(opts) { return opts; }, // opts.ajaxUrl or opts.localStorageKey
@@ -90,12 +63,6 @@ window.$happy = window.$happy || {};
       return selector ? elContext.querySelector(selector) : elDefault; },
     findElAll: function(selector, elContext) { elContext = elContext || document;
       return elContext.querySelectorAll(selector); },
-    parse: function(val) { return val; },
-    getVal: function() { var val = {}, model = this.model;
-      if (model.children.length > 1) { model.children.forEach(function(child){ val[child.id] = child.$view.getVal(); }); }
-      else { val = model.children.length ? model.children[0].$view.getVal() : this.parse(model.el.value); }
-      //console.log('$view::getVal(), id:', model.id, ', val =', val);
-      return val; },
     getType: function(el, defaultType) {
       var type = el.getAttribute('data-type'); if (type) { return type; }
       type = el.getAttribute('type'); if (type) { return upperFirst(type); }
@@ -109,22 +76,12 @@ window.$happy = window.$happy || {};
       case 'after': elAnchor.parentElement.insertBefore(elView, elAnchor.nextSibling); break;
       default: elAnchor.appendChild(elView); }
       return elView; },
-    format: function(val) { return val; },
-    setVal: function(val, deep) { var self = this, children = this.model.children; // renderVal()????
-        if ( ! children.length) { this.model.el.value = this.format(val?val:''); }
-        else if (deep && children.length === 1) { children[0].$view.setVal(this.format(val?val:'')); }
-        else if (deep) { children.forEach(function(child) { child.$view.setVal(self.format(val?val[child.id]:'')); }); }
-      //console.log('view::setVal(), id:', this.model.id, ', val =', val);
-      return val; },
-    renderHappy: function(isHappy) { this.model.el.classList.toggle('unhappy', !isHappy); },
-    renderModified: function(isModified) { this.model.el.classList.toggle('modified', isModified); },
-    renderMessages: function(data) { var mgs = this.model.createMessages(data); mgs.forEach(function(m){ m.mount(); }); },
     remove: function(el) { return this.el.parentElement.removeChild(el); }
   };
 
 
   //////// HAPPY MESSAGE /////////
-  function Message(text, opts) { this.text = text; this.$view = new View(this); extend(this, opts); }
+  function Message(props) { this.$view = new View(this); extend(this, props); }
   Message.prototype = { happyType: 'message',
     getAnchor: function(anchorSelector, elContext) { return this.$view.findEl(anchorSelector, elContext, window.document); },
     mount: function(elMsg, elAnchor, mountStyle) { elAnchor = elAnchor || this.getAnchor(this.anchorSelector, this.elContext);
@@ -162,11 +119,6 @@ window.$happy = window.$happy || {};
     this.el = this.getEl();
     this.id = this.opts.id || this.getId();
     this.childNodes = []; this.children = this.getChildren();
-    this.messageTypes = this.opts.messageTypes || this.getMessageTypes();
-    var val = this.opts.val; if (typeof val === 'undefined') {
-     if (this.children.length) { val = this.$state.genVal(); this.$state.setVal(val, 'init'); this.$view.setVal(val); }
-     else { this.$state.setVal(this.$view.getVal(), 'init');  }
-    } else { this.$state.setVal(this.opts.val, 'init'); this.$view.setVal(this.opts.val, 'deep'); }
     this.triggerEvent('onInit');
   }
   HappyElement.prototype = {
@@ -193,31 +145,48 @@ window.$happy = window.$happy || {};
       });
       return children;
     },
-    reset: function() { var initialVal = this.$state.reset(); this.$view.setVal(initialVal); },
-    getMessageTypes: function() { var form = this.getParent('form') || this;
-      return { 'error': [this.el, '.errors', 'append'], 'summary': [form.el, '.actions', 'before'] }; },
-    createMessages: function(reason, event, msgData, opts) { var self = this;
-      msgData.forEach(function(data) { self.messages.push( new Message( data.msg, { anchorSelector: opts.anchorSelector, elContext: self.el }) ); });
-      return this.messages; },
     triggerEvent: function(eventName, args) { var r, handlers = this[eventName] || {};
       for (var i in handlers) { var handler = handlers[i];
         if (typeof handler === 'function' && (r = handler.apply(this, args))) { return r; } } },
     addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el); },
+    reset: function() { var initialVal = this.$state.reset(); this.$view.setVal(initialVal); },
   };
 
 
   ////// VALIDATABLE ///////
-  var Validatable = { happyType: 'validatable', validators: [], messages: [],
-    validate: function(reason, event, opts) { var self = this, results = [];
-      this.children.forEach(function(child){ if (child.validate) { results = results.concat(child.validate(reason, event, opts)); } });
-      this.validators.forEach(function(validator) { results.push(validator.validate(self, reason, event, opts)); });
-      // window.console.log(this.happyType + '::validate(), results =', results);
-      results.forEach(function(result, i) { results[i] = self.parseValidateResult(result); });
-      this.$state.getHappy(results); return this.$state.set('errors', results);
+  var Validatable = { happyType: 'validatable', validators: [],
+    $state: {
+      setVal: function(val, init) {
+        if (init) { this.set('initialVal', val); val = copy(val); }
+        var children = this.model.children, deep = isExtendable(val);
+        if (children.length) { children.forEach(function(child) { child.$state.setVal(deep ? val[child.id] : val, init); }); }
+        this.set('value', val);
+        //console.log('$state::setVal(), id:', this.model.id, ', val =', val, ', init =', init);
+        return val; },
+      setHappy: function(val, init) { return this.set('isHappy', val, init); },
+      setErrors: function(errors, init) { return this.set('errors', errors || [], init); },
+      setMessages: function(messages, init) { return this.set('messages', messages || [], init); },
+      setModified: function(val, init) { return this.set('isModified', val, init); },
+      getVal: function(defaultVal) { return this.get('value', defaultVal); },
+      getModified: function() { return this.get('isModified', false); },
+      getErrors: function() { var errors = this.get('errors', []); console.log('$state::getErrors(), id:', this.model.id, ', errors =', errors); return errors; },
+      getMessages: function() { return this.get('messages', []); },
+      getHappy: function() { return this.get('isHappy', true); },
+      updateVal: function(reason, event, opts) { this.setVal(this.model.getValue(reason, event, opts));
+        if (this.parent.$state) { this.parent.$state.updateVal('childAsked', event, opts); } },
+      updateModified: function(reason, event, opts) { this.setModified(this.model.getModified(reason, event, opts));
+        if (this.parent.$state) { this.parent.$state.updateModified('childAsked', event, opts); } },
+      updateHappy: function(reason, event, opts) { this.setHappy(this.model.getHappy(reason, event, opts));
+        if (this.parent.$state) { this.parent.$state.updateHappy('childAsked', event, opts); } },
     },
-    parseValidateResult: function(result) { return result; },
     $view: {
-      isLabel: function(el) { return el && el.nodeName === 'LABEL'; },
+      parse: function(val) { return val; },
+      format: function(val) { return val; },
+      getVal: function() { var val = {}, model = this.model;
+        if (model.children.length > 1) { model.children.forEach(function(child){ val[child.id] = child.$view.getVal(); }); }
+        else { val = model.children.length ? model.children[0].$view.getVal() : this.parse(model.el.value); }
+        //console.log('$view::getVal(), id:', model.id, ', val =', val);
+        return val; },
       getLabel: function() {
         var model = this.model, el = model.el, elParent = model.parent ? model.parent.el : el.parentElement, elLabel;
         if (model.happyType === 'input') { elLabel = this.isLabel(el.previousElementSibling) ? el.previousElementSibling
@@ -225,33 +194,84 @@ window.$happy = window.$happy || {};
         else { elLabel = this.isLabel(el.firstElementChild) ? el.firstElementChild : el.querySelector('label'); }
         model.label = elLabel ? elLabel.innerHTML : el.getAttribute('data-label');
         // window.console.log('gelLabel(), label:', model.label, ', elLabel:', elLabel, ', elParent:', elParent, ', el:', el);
-        return model.label;
-      },
-      getValidators: function() { return this.model.el.required ? [new Validator('required', Required)] : []; }
+        return model.label; },
+      isLabel: function(el) { return el && el.nodeName === 'LABEL'; },
+      getValidators: function() { return this.model.el.required ? [new Validator('required', Required)] : []; },
+      renderMessages: function(messages) { messages.forEach(function(m){ m.mount(); }); },
+      renderModified: function(isModified) { this.model.el.classList.toggle('modified', isModified); },
+      renderHappy: function(isHappy) { this.model.el.classList.toggle('unhappy', !isHappy); },
+      renderVal: function(val) { var self = this, children = this.model.children;
+          if ( ! children.length) { this.model.el.value = this.format(val?val:''); }
+          else if (children.length === 1) { children[0].$view.renderVal(this.format(val?val:'')); }
+          else if (typeof val === 'object') {
+            children.forEach(function(child) { child.$view.renderVal(self.format(val?val[child.id]:'')); }); }
+        //console.log('view::renderVal(), id:', this.model.id, ', val =', val);
+        return val; },
+      updateHappy: function() {},
+      updateModified: function() {},
+      updateMessages: function() {},
     },
-    onInit: { validatable: function() { this.validators = this.getO('validators') || this.$view.getValidators(); } }
+    initVal: function(val) { var mustGetVal = (typeof val === 'undefined');
+      if (mustGetVal) { val = this.children.length ? this.getValue('onInit') : this.$view.getVal(); }
+      if ( ! mustGetVal || this.children.length ) { this.$view.renderVal(val); }
+      return this.$state.setVal(val, 'init'); },
+    getValue: function(reason, event, opts) { opts = opts || {};
+      var val, children = this.children, deep = (reason !== 'childAsked');
+      if (children.length === 0) { val = this.$state.getVal(this.defaultVal); }
+      else if (children.length === 1) { var child = children[0];
+        val = deep ? child.getValue(reason, event, opts) : child.$state.getVal(child.defaultVal); }
+      else { val = {}; children.forEach(function(child) {
+        val[child.id] = deep ? child.getValue(reason, event, opts) : child.$state.getVal(child.defaultVal);
+      }); }
+      //console.log('$state::genVal(), id:', this.model.id, ', deep:', deep, ', val =', val);
+      return val; },
+    getModified: function(reason, event, opts) {
+     var i, modified, children = this.children, deep = (reason !== 'childAsked');
+     if (children.length === 0) { modified = ! isSame(this.$state.getValue(), this.$state.get('initialVal')); }
+     else { for (i = 0; i < children.length; i++) { var child = children[i],
+       modified = deep ? child.getModified(reason, event, opts) : child.$state.getModified(); if (modified) { break; }
+     } }
+      //console.log('$state.genModified(), deep:', deep, ', id:', this.model.id);
+    },
+    getHappy: function(reason, event, opts) {
+      if (reason === 'childAsked') { return this.$state.getHappy(); } var self = this, results = [];
+      this.children.forEach(function(child){ if (child.getHappy) { results = results.concat(child.getHappy(reason, event, opts)); } });
+      this.validators.forEach(function(validator) { results.push(validator.validate(self, reason, event, opts)); });
+      this.$state.setErrors(results); this.$state.setMessages(this.getMessages());
+      // window.console.log(this.happyType + '::validate(), results =', results);
+      return results; },
+    getMessages: function() { var errors = this.$state.getErrors(), messages = [];
+      errors.forEach(function(err) { messages.push(new Message(err)); }); return messages; },
+    onInit: { validatable: function() {
+      this.messageTypes = { validate: { anchorSelector: '.input', mount: 'after', context: 'parent' } };
+      this.validators = this.getO('validators') || this.$view.getValidators();
+      this.initVal(this.getO('val'));
+    } },
   };
 
 
   //////// FORM /////////
-  var Form = extendPlugin(Validatable, { happyType: 'form',
+  var Form = extendCloneOf(Validatable, { happyType: 'form',
     addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child;
-      this.$state.setVal(this.$state.genVal(), 'init'); },
+      this.$state.setVal(this.getValue('childAsked'), 'init'); }, // New child element asked :)
     opts: { selector: 'form', childSelector: '.field', defaultChildType: 'Field' },
-    onInit: { form: function() { var self = this; this.fields = {}; this.children.forEach(function(child) { self.fields[child.id] = child; });
-      window.console.log('Form::errors =', self.errors); } }
+    onInit: { form: function() { var self = this; this.fields = {};
+      this.children.forEach(function(child) { self.fields[child.id] = child; }); }
+    },
   });
 
 
   //////// FIELD /////////
-  var Field = extendPlugin(Validatable, { happyType: 'field',
+  var Field = extendCloneOf(Validatable, { happyType: 'field',
     opts: { selector: '.field', childSelector: '.input', defaultChildType: 'Input' },
-    onInit: { field: function() { var self = this; this.inputs = {}; this.children.forEach(function(child) { self.inputs[child.id] = child; }); } }
+    onInit: { field: function() { var self = this; this.inputs = {};
+      this.children.forEach(function(child) { self.inputs[child.id] = child; }); }
+    },
   });
 
 
   //////// INPUT /////////
-  var Input = extendPlugin(Validatable, { happyType: 'input', opts: { selector: '.input' } });
+  var Input = extendCloneOf(Validatable, { happyType: 'input', opts: { selector: '.input' } });
 
 
   ////// REQUIRED ///////
@@ -263,6 +283,6 @@ window.$happy = window.$happy || {};
   };
 
 
-  extend($happy, { HappyElement, Validator, Validatable, Form, Field, Input, Message, isSame, extend, clone, copy, extendPlugin });
+  extend($happy, { HappyElement, Validator, Validatable, Form, Field, Input, Message, isSame, extend, clone, copy, extendCloneOf });
 
 }(window.F1, window.$happy));
