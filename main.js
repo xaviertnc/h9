@@ -29,7 +29,7 @@ form.onSubmit = function(elForm, event) {
   frm.$state.updateHappy('onSubmit', event);
   frm.$view.updateHappy(frm.$state.getHappy());
   frm.$view.updateModified(frm.$state.getModified());
-  frm.$view.updateMessages(frm.$state.getMessages());
+  //frm.$view.updateMessages(frm.$state.getMessages());
 //   if (frm.parent && this.parent.getHappy) { this.parent.getHappy('childAsked', event, opts); }
 
 }

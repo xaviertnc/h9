@@ -172,12 +172,15 @@ window.$happy = window.$happy || {};
       getErrors: function() { var errors = this.get('errors', []); console.log('$state::getErrors(), id:', this.model.id, ', errors =', errors); return errors; },
       getMessages: function() { return this.get('messages', []); },
       getHappy: function() { return this.get('isHappy', true); },
-      updateVal: function(reason, event, opts) { this.setVal(this.model.getValue(reason, event, opts));
-        if (this.parent.$state) { this.parent.$state.updateVal('childAsked', event, opts); } },
-      updateModified: function(reason, event, opts) { this.setModified(this.model.getModified(reason, event, opts));
-        if (this.parent.$state) { this.parent.$state.updateModified('childAsked', event, opts); } },
-      updateHappy: function(reason, event, opts) { this.setHappy(this.model.getHappy(reason, event, opts));
-        if (this.parent.$state) { this.parent.$state.updateHappy('childAsked', event, opts); } },
+      updateVal: function(reason, event, opts) {
+        opts = opts || {}; opts.update = true; this.model.getValue(reason, event, opts);
+        if (this.parent) { this.parent.$state.updateVal('childAsked', event, opts); } },
+      updateModified: function(reason, event, opts) {
+        opts = opts || {}; opts.update = true; this.model.getModified(reason, event, opts);
+        if (this.parent) { this.parent.$state.updateModified('childAsked', event, opts); } },
+      updateHappy: function(reason, event, opts) {
+        opts = opts || {}; opts.update = true; this.model.getHappy(reason, event, opts);
+        if (this.parent) { this.parent.$state.updateHappy('childAsked', event, opts); } },
     },
     $view: {
       parse: function(val) { return val; },
@@ -206,10 +209,7 @@ window.$happy = window.$happy || {};
           else if (typeof val === 'object') {
             children.forEach(function(child) { child.$view.renderVal(self.format(val?val[child.id]:'')); }); }
         //console.log('view::renderVal(), id:', this.model.id, ', val =', val);
-        return val; },
-      updateHappy: function() {},
-      updateModified: function() {},
-      updateMessages: function() {},
+        return val; }
     },
     initVal: function(val) { var mustGetVal = (typeof val === 'undefined');
       if (mustGetVal) { val = this.children.length ? this.getValue('onInit') : this.$view.getVal(); }
@@ -222,24 +222,28 @@ window.$happy = window.$happy || {};
         val = deep ? child.getValue(reason, event, opts) : child.$state.getVal(child.defaultVal); }
       else { val = {}; children.forEach(function(child) {
         val[child.id] = deep ? child.getValue(reason, event, opts) : child.$state.getVal(child.defaultVal);
-      }); }
+      }); } if (opts.update) { this.$state.setVal(val); }
       //console.log('$state::genVal(), id:', this.model.id, ', deep:', deep, ', val =', val);
       return val; },
     getModified: function(reason, event, opts) {
-     var i, modified, children = this.children, deep = (reason !== 'childAsked');
-     if (children.length === 0) { modified = ! isSame(this.$state.getValue(), this.$state.get('initialVal')); }
-     else { for (i = 0; i < children.length; i++) { var child = children[i],
-       modified = deep ? child.getModified(reason, event, opts) : child.$state.getModified(); if (modified) { break; }
-     } }
+      var i, modified = false, children = this.children, deep = (reason !== 'childAsked');
+      if (children.length === 0) { modified = ! isSame(this.$state.getVal(), this.$state.get('initialVal')); }
+      else { for (i = 0; i < children.length; i++) { var child = children[i],
+        modified = deep ? child.getModified(reason, event, opts) : child.$state.getModified(); if (modified) { break; }
+      } } if (opts.update) { this.$state.setModified(modified); }
       //console.log('$state.genModified(), deep:', deep, ', id:', this.model.id);
+      return modified;
     },
-    getHappy: function(reason, event, opts) {
-      if (reason === 'childAsked') { return this.$state.getHappy(); } var self = this, results = [];
-      this.children.forEach(function(child){ if (child.getHappy) { results = results.concat(child.getHappy(reason, event, opts)); } });
+    validate: function(reason, event, opts) { var self = this, results = [],
+      deep = (reason !== 'childAsked'); this.children.forEach(function(child){ if (child.validate) {
+        results = results.concat(deep ? child.validate(reason, event, opts) : child.$state.getErrors()); } });
       this.validators.forEach(function(validator) { results.push(validator.validate(self, reason, event, opts)); });
-      this.$state.setErrors(results); this.$state.setMessages(this.getMessages());
+      this.$state.setErrors(results); this.$state.setHappy(results ? !results.length : true);
       // window.console.log(this.happyType + '::validate(), results =', results);
       return results; },
+    getHappy: function(reason, event, opts) { var results = this.validate(reason, event, opts);
+      // window.console.log(this.happyType + '::validate(), results =', results);
+      return this.$state.getHappy() },
     getMessages: function() { var errors = this.$state.getErrors(), messages = [];
       errors.forEach(function(err) { messages.push(new Message(err)); }); return messages; },
     onInit: { validatable: function() {
