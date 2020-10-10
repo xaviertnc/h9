@@ -23,7 +23,7 @@ window.$happy = window.$happy || {};
         //console.log('Radio.$view::getVal(), id:', this.model.id, ', val =', val);
         return val; },
       renderVal: function(val) {
-        console.log('Radio.$view::renderVal(), id:', this.model.id, ', val =', val);
+        // console.log('Radio.$view::renderVal(), id:', this.model.id, ', val =', val);
         this.model.el.checked = (this.model.el.value == val);
         return val; },
     }
@@ -38,7 +38,7 @@ window.$happy = window.$happy || {};
 
     getValue: function(reason, event, opts) { var val, children = this.children, i, n = children.length;
       for(i = 0; i < n; i++) { var c = children[i], v = c.getValue(reason, event, opts);
-        if (typeof v !== 'undefined') { val = v; break; } };
+        if (v !== undefined) { val = v; break; } };
       //console.log('RadioList.$state::getVal(), id:', this.model.id, ', val =', val);
       return val;
     },

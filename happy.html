@@ -46,6 +46,11 @@
     .modified > .show-if-modified {
       display: block;
     }
+    .field.unhappy > label,
+    label.unhappy,
+    input.unhappy {
+      color: red;
+    }
   </style>
 </head>
 <body>
@@ -54,7 +59,7 @@
   </header>
   <hr>
   <main>
-    <form method="POST" onsubmit="form.onSubmit(this, event)" novalidate>
+    <form method="POST" novalidate>
       <div class="show-if-unhappy">* Form Is Unhappy *</div>
       <div class="show-if-modified">* Form Is Modified *</div>
       <div class="field required">

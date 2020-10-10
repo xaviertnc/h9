@@ -20,19 +20,4 @@ var form = new $happy.HappyElement(F1, { as: $happy.Form });
 form.addEl(new $happy.HappyElement(form, { as: $happy.StreetAddress, elMount: elQ2, mountStyle: 'before', selector: null, val: streetAddress }));
 form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMount: elQ2, mountStyle: 'after', selector: null, val: 'Hello World!' }));
 
-form.onSubmit = function(elForm, event) {
-  var frm = this;
-  event.preventDefault();
-  console.log('** Form submitted **\nElement:', elForm, '\nEvent:', event, '\nHappyForm:', frm);
-  frm.$state.updateVal('onSubmit', event);
-  frm.$state.updateModified('onSubmit', event);
-  frm.$state.updateHappy('onSubmit', event);
-  frm.$view.updateHappy(frm.$state.getHappy());
-  frm.$view.updateModified(frm.$state.getModified());
-  //frm.$view.updateMessages(frm.$state.getMessages());
-//   if (frm.parent && this.parent.getHappy) { this.parent.getHappy('childAsked', event, opts); }
-
-}
-
-
 console.log('form:', form);
