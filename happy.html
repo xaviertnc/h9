@@ -59,7 +59,7 @@
   </header>
   <hr>
   <main>
-    <form method="POST" novalidate>
+    <form method="POST" onsubmit="form.onSubmit(this, event)" novalidate>
       <div class="show-if-unhappy">* Form Is Unhappy *</div>
       <div class="show-if-modified">* Form Is Modified *</div>
       <div class="field required">
@@ -98,7 +98,7 @@
             Option A
           </label>
           <label>
-            <input class="input" type="radio" name="form[q1]" value="B" checked>
+            <input class="input" type="radio" name="form[q1]" value="B">
             Option B
           </label>
           <label>
@@ -107,7 +107,7 @@
           </label>
         </div>
       </div>
-      <div id="question_2" class="field" data-type="CheckList">
+      <div id="question_2" class="field " data-type="CheckList" required>
         <label>Question 2</label>
         <div class="input-group check-group">
           <label>
@@ -119,7 +119,7 @@
             Option 2
           </label>
           <label>
-            <input class="input" type="checkbox" name="form[q2]" value="3" checked>
+            <input class="input" type="checkbox" name="form[q2]" value="3">
             Option 3
           </label>
         </div>
