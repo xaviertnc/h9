@@ -36,11 +36,11 @@ window.$happy = window.$happy || {};
 
     happyType: 'radiolist',
 
-    getValue: function(reason, event, opts) { var val, children = this.children, i, n = children.length;
-      for(i = 0; i < n; i++) { var c = children[i], v = c.getValue(reason, event, opts);
-        if (v !== undefined) { val = v; break; } };
-      //console.log('RadioList.$state::getVal(), id:', this.model.id, ', val =', val);
-      return val;
+    calcValue: function(reason, event, opts) { //console.log('RadioList::calcValue() - start, id:', this.id);
+      var v, i, n = this.children.length;
+      for (i = 0; i < n; i++) { var c = this.children[i], v = c.$state.getVal(); if (v !== undefined) { break; } }
+      //console.log('RadioList::calcValue() - done, val =', v);
+      return v;
     },
 
   });
@@ -92,29 +92,30 @@ window.$happy = window.$happy || {};
     // NB: We don't need to re-define getValue, setVal, getVal if we stick to conventions
     // and give children ID's that match the value object's keys!
     // StreetAddress is done differently just to demonstrate what's possible.
-    getValue: function(reason, event, opts) {
-      var children = this.children, deep = reason !== 'childAsked', val = {
-        street: deep ? children[0].getValue(reason, event, opts) : children[0].$state.getVal(children[0].defaultVal),
-        suburb: deep ? children[1].getValue(reason, event, opts) : children[1].$state.getVal(children[1].defaultVal),
-        city  : deep ? children[2].getValue(reason, event, opts) : children[2].$state.getVal(children[2].defaultVal),
-        code  : deep ? children[3].getValue(reason, event, opts) : children[3].$state.getVal(children[3].defaultVal) };
-      //console.log('StreetAddr.getValue(), val =', val, ', reason:', reason);
-      return val;
+    calcValue: function(reason, event, opts) {
+      //console.log('StreetAddress::calcValue() - start, id:', this.id);
+      var children = this.children, v = {
+        street: children[0].$state.getVal(),
+        suburb: children[1].$state.getVal(),
+        city  : children[2].$state.getVal(),
+        code  : children[3].$state.getVal() };
+      //console.log('StreetAddress::calcValue() - done, val =', v);
+      return v;
     },
 
 
     $state: {
 
-      setVal: function(val, init) {
-        var children = this.model.children;
-        val = val ? val : { street: '', suburb: '', city: '', code: '' };
-        if (init) { this.set('initVal', val); val = $happy.copy(val); }
-        children[0].$state.setVal(val.street, init);
-        children[1].$state.setVal(val.suburb, init);
-        children[2].$state.setVal(val.city, init);
-        children[3].$state.setVal(val.code, init);
-        this.set('value', val);
-        return val;
+      setVal: function(v, reason) {
+        v = v || {}; var c = this.model.children;
+        //console.log('StreetAddress::$state.setVal(), id:', this.id, ', val:', v, ', reason:', reason);
+        if (reason === 'init') { this.set('initialVal', v); v = $happy.copy(v); }
+        c[0].$state.setVal(v.street, reason);
+        c[1].$state.setVal(v.suburb, reason);
+        c[2].$state.setVal(v.city, reason);
+        c[3].$state.setVal(v.code, reason);
+        this.set('value', v);
+        return v;
       }
 
     },
@@ -122,25 +123,13 @@ window.$happy = window.$happy || {};
 
     $view: {
 
-      getVal: function() {
-        var children = this.model.children, val = {
-          street: this.parse(children[0].$view.getVal()),
-          suburb: this.parse(children[1].$view.getVal()),
-          city  : this.parse(children[2].$view.getVal()),
-          code  : this.parse(children[3].$view.getVal()) };
-        //console.log('StreetAddr.$view.getVal(), val =', val);
-        return val;
-      },
-
-      renderVal: function(val) {
-        var children = this.model.children;
-        val = val ? val : { street: '', suburb: '', city: '', code: '' };
-        children[0].$view.renderVal(this.format(val.street));
-        children[1].$view.renderVal(this.format(val.suburb));
-        children[2].$view.renderVal(this.format(val.city));
-        children[3].$view.renderVal(this.format(val.code));
-        //console.log('StreetAddr.$view.renderVal(), val =', val);
-        return val; // important!
+      renderVal: function(v) {
+        v = v || {}; var c = this.model.children;
+        c[0].$view.renderVal(this.format(v.street));
+        c[1].$view.renderVal(this.format(v.suburb));
+        c[2].$view.renderVal(this.format(v.city));
+        c[3].$view.renderVal(this.format(v.code));
+        return v; // important!
       },
 
       make: function() {

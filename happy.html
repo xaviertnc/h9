@@ -32,19 +32,33 @@
       margin-top: 2rem;
       padding: 1rem;
     }
+    .status-bar {
+      background-color: gainsboro;
+      line-height: 1.5em;
+      height: 1.5em;
+      display: flex;
+    }
     .show-if-unhappy {
       color: red;
       display: none;
     }
-    .unhappy > .show-if-unhappy {
-      display: block;
+    .unhappy .show-if-unhappy {
+      display: inline-block;
+      flex: 1;
+      text-align: center;
+      background-color: red;
+      color: white;
     }
     .show-if-modified {
       color: green;
       display: none;
     }
-    .modified > .show-if-modified {
-      display: block;
+    .modified .show-if-modified {
+      display: inline-block;
+      background-color: green;
+      color: white;
+      flex: 1;
+      text-align: center;
     }
     .field.unhappy > label,
     label.unhappy,
@@ -57,12 +71,13 @@
   <header>
     <h1>Happy JS v9</h1>
   </header>
-  <hr>
   <main>
     <form method="POST" onsubmit="form.onSubmit(this, event)" novalidate>
-      <div class="show-if-unhappy">* Form Is Unhappy *</div>
-      <div class="show-if-modified">* Form Is Modified *</div>
-      <div class="field required">
+      <div class="status-bar">
+        <span class="show-if-unhappy">* Unhappy *</span>
+        <span class="show-if-modified">* Modified *</span>
+      </div>
+      <div class="field" required>
         <label>Field 1</label>
         <div class="input-container">
           <input class="input" name="form[v1]" value="" required>
@@ -90,7 +105,7 @@
           </div>
         </fieldset>
       </div>
-      <div id="question_1" class="field" data-type="RadioList">
+      <div id="question_1" class="field" data-type="RadioList" required>
         <label>Question 1</label>
         <div class="input-group radio-group">
           <label>
@@ -124,7 +139,10 @@
           </label>
         </div>
       </div>
-      <hr>
+      <div class="status-bar">
+        <span class="show-if-unhappy">* Unhappy *</span>
+        <span class="show-if-modified">* Modified *</span>
+      </div>
       <br>
       <div class="actions">
         <button type="submit">Submit</button>

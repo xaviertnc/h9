@@ -95,7 +95,66 @@ Updating state based on call from child element:
 
 
 
-  Need:
+Get Value (REASON)
+  REASON == UPDATE: Get value from View
+  REASON == INIT: Get value from Options.val || View
+  Default: Get value from State
+
+Calc Value
+  Aggregate direct child values by default.  Can be something custom too.
+
+Update Value (REASON, DEEP)
+  Val = DEEP ? Get Value (UPDATE, DEEP) : Calc Value
+  REASON == INIT ? Init Value : Set Value
+  Call Update on Parent element. DEEP == FALSE
+
+Init Value (Special Case of Update Value)
+  Update Value (Reason = INIT)
+
+
+Getting values
+
+  On Submit, On Validate
+    - Get value from element $state
+
+  On Update
+    Update works from the calling element UP!  We don't drill down on updates!  We only update parents, if INIT == false!
+
+    DEEP: If update NOT requested by a child element, drill down through children and start updating values from the ground up.
+    !DEEP: If update requested by a child element, only go down one level and get the value from the direct child states!
+
+    On Initialize
+    - Get value from constructor opts.val or DOM if children = 0
+    - Get value from direct children states if children > 0
+    - Init own $state value
+    - Request update on parent element
+
+    On User Input + Input Value Modified
+    - Update value from DOM if children = 0
+    - Update value from direct children states if children > 0
+    - Set own $state value
+    - Request update on parent element
+
+
+
+getValue(REASON, DEEP)
+
+  REASON == Init:
+    children == 0:
+      getO('val', el.value)
+    else children > 0:
+      children.forEach(DEEP ? child.getValue(REASON, DEEP) : child.$state.getVal());
+
+  REASON == Update:
+
+    this.$state.setVal();
+    this.parent.update(!DEEP)
+
+  Default:
+
+
+
+Also Needed:
 
   All messages must have a common selector or we need a view::getMessages() to get all the messages for any element.
   An element's errors array contains its own errors as well as errors forwarded by its children or other elements.
