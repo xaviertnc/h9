@@ -91,7 +91,7 @@ window.$happy = window.$happy || {};
     getEl: function() { var el = this.getO('el'); if (el) { return el; }
       var selector = this.getO('selector'), elContext = this.parent.el || document.body;
       if (selector) { return this.$view.findEl(selector, elContext); }
-      return this.$view.mount(this.getO('elMount', elContext), this.getO('mountStyle'));
+      return this.$view.mount(this.getO('elMountAnchor', elContext), this.getO('mountStyle'));
     },
     getParent: function(happyType) { var self = this.parent; while (self) {
       if (self.happyType === happyType) { return self; } self = self.parent; } },
@@ -117,13 +117,14 @@ window.$happy = window.$happy || {};
 
 
   //////// ERROR MESSAGE /////////
-  var ErrorMessage = { happyType: 'error_message', $view: { make: function() { var m = this.model, e = m.getO('error'),
-      t = m.getO('msgType'), className = m.getO('className', 'message error' + (t.id ? ' ' + m.type : '')),
-      el = View.prototype.make(nextId('err'), className); el.innerHTML = t.alt ? e.altMsg : e.msg; return el; }, },
-    getMountContextEl: function(t, elErr) { return (t.context === 'parent') ? elErr.parentElement : (elErr || window.document); },
-    getAnchorEl: function(t, elMountContext) { return t.anchorSelector ? elMountContext.querySelector(t.anchorSelector) : elMountContext; },
-    beforeInit: { errorMessage: function(opts) { var e = opts.error, t = opts.msgType || {}; this.elMountAnchor = opts.elAnchor;
-    if (!this.elMountAnchor) { this.elMountAnchor = this.getAnchorEl(t, opts.elMountContext || this.getMountContextEl(t, e.owner.el)); } } },
+  var ErrorMessage = { happyType: 'error_message', $view: { make: function() { var m = this.model,
+      className = m.getO('className', 'message error' + (m.type ? ' ' + m.type : '')),
+      el = View.prototype.make(m.getO('id') || nextId('err'), className); el.innerHTML = m.msgText; return el; }, },
+    getAnchorContext: function(t, elErr) { return (t.anchorContext === 'parent') ? elErr.parentElement : (elErr || window.document); },
+    getAnchorEl: function(t, elAnchorContext) { console.log('getAnchorEl(), t:', t, ', elAnchorContext:', elAnchorContext, this); return t.anchorSelector ? elAnchorContext.querySelector(t.anchorSelector) : elAnchorContext; },
+    beforeInit: { errorMessage: function(opts) { var e = opts.error, t = opts.msgType || {};
+      if (!this.elMountAnchor) { this.elMountAnchor = this.getAnchorEl(t, this.getAnchorContext(t, e.owner.el)); }
+      this.owner = e.owner; this.msgText = t.alt ? e.altMsg : e.msg; this.type = t.id; delete opts.error; delete opts.msgType; } },
   };
 
 
@@ -141,7 +142,6 @@ window.$happy = window.$happy || {};
         //console.log('$state::setVal(), id:', this.model.id, ', val =', val, ', init =', init);
         return val; },
       setHappy: function(val) { return this.set('isHappy', val); },
-      setErrors: function(errors) { return this.set('errors', errors || []); },
       setModified: function(val) { return this.set('isModified', val); },
       getVal: function() { var val = this.get('value'); /*console.log('STATE::getVal(), id:', this.model.id, ', val =', val);*/ return val; },
       getHappy: function() { return this.get('isHappy', true); },
@@ -168,7 +168,8 @@ window.$happy = window.$happy || {};
         model.label = elLabel ? elLabel.innerHTML : el.getAttribute('data-label');
         // window.console.log('gelLabel(), label:', model.label, ', elLabel:', elLabel, ', elParent:', elParent, ', el:', el);
         return model.label; },
-      getMessages: function() { return this.model.el.querySelectorAll('.message'); },
+      getMessages: function(selector) { return this.model.el.querySelectorAll(selector || this.model.getO('messageSelector', '.message')); },
+      removeMessages: function(selector) { var msgs = this.getMessages(selector); msgs.forEach(function(elMsg){ View.prototype.remove(elMsg); }); },
       getUnhappyInput: function() { return this.model.el.querySelector('.input.unhappy,.field.unhappy input'); },
       getErrorInput: function(error) { var el = error.owner.el; return el.classList.contains('.input') ? el : el.querySelector('.input'); },
       getValidators: function() { return this.model.el.hasAttribute('required') ? [new Validator('required', Required)] : []; },
@@ -177,10 +178,8 @@ window.$happy = window.$happy || {};
       renderHappy: function(isHappy) { var el = this.model.el; el.classList.toggle('unhappy', !isHappy);
         if (this.isLabel(el.previousElementSibling)) { el.previousElementSibling.classList.toggle('unhappy', !isHappy); } },
         // validate: { anchorSelector: '.input', mount: 'after', context: 'parent', alt: 0 }
-      renderError: function(error, msgType) { console.log('renderError(), msgType =', msgType);
-        var msgs = this.model.$state.getMessages(), opts = { as: ErrorMessage, error: error, msgType: msgType };
-        console.log('renderError(), msgs =', msgs);
-        var msg = new HappyElement(this.model, opts);
+      renderError: function(error, msgType, className, id) { console.log('renderError(), error =', error, ', msgType =', msgType, ', this.model =', this.model);
+        var msgs = this.model.$state.getMessages(), msg = new HappyElement(this.model, { as: ErrorMessage, error, msgType, className, id });
         console.log('renderError(), msg =', msg); msgs.push(msg); return msg; },
       renderVal: function(val) { var self = this, children = this.model.children;
           if (!children.length) { this.model.el.value = this.format(val?val:''); }
@@ -188,8 +187,11 @@ window.$happy = window.$happy || {};
           else if (typeof val === 'object') {
             children.forEach(function(child) { child.$view.renderVal(self.format(val?val[child.id]:'')); }); }
         //console.log('view::renderVal(), id:', this.model.id, ', val =', val);
-        return val; }
+        return val; },
     },
+    clearErrors: function(msgSelector, depth) { var depth = depth ? depth + 1 : 0; if (this.children.length) {
+      this.children.forEach(function(child){ child.clearErrors(msgSelector, depth); }); } this.$state.set('errors', []);
+      this.$state.set('messages', []); if (depth === 0) { this.$view.removeMessages(); } },
     calcModified: function(reason, event, opts) { return this.$state.getVal() != this.$state.get('initialVal'); },
     childrenModified: function(reason, event, opts) { /*console.log('childrenModified()');*/ for (var i = 0; i < this.children.length; i++) {
       if (this.children[i].$state.getModified()) { return true; } } return false; },
@@ -212,7 +214,7 @@ window.$happy = window.$happy || {};
         if (happy && this.validators.length) { errors = this.validate(reason, event, opts); happy = !errors.length; } }
       if (this.$state.getHappy() !== happy && (!this.onHappy || !this.onHappy(happy, errors))) {
         this.$state.setHappy(happy); this.$view.renderHappy(happy); }
-      this.$state.setErrors(errors);
+      this.$state.set('errors', errors);
       return happy;
     },
     calcValue: function(reason, event, opts) { var v; // console.log('calcValue() - start, id:', this.id);
@@ -232,7 +234,8 @@ window.$happy = window.$happy || {};
       return happy;
     },
     onInit: { validatable: function() { this.$state.set('messages', []);
-      this.messageTypes = { validate: { id: 'validate', anchorSelector: '.input', mount: 'after', context: 'parent', alt: 0 } };
+      this.messageTypes = { error: { id: 'validate', anchorSelector: '.input', anchorContext: 'self', mountStyle: 'after', alt: 0 },
+        summary: { id: 'summary', anchorSelector: '.error-summary', anchorContext: 'self', mountStyle: 'append', alt: 1 } };
       this.validators = this.getO('validators') || this.$view.getValidators(); var iv = this.getO('initialValue');
       if (iv !== undefined) { this.$state.setVal(iv, 'init', 'deep'); this.$view.renderVal(iv); }
       else { this.update('init'); } }
@@ -274,7 +277,7 @@ window.$happy = window.$happy || {};
   ////// REQUIRED VALIDATOR ///////
   var Required = {
     validateFn: function(model) { var val = model.$state.getVal(); if (val === undefined || empty(val)) {
-      var msg = this.getMessage(model); return { owner: model, msg, altMsg: this.getAltMessage(model) || msg, val }; } },
+      var msg = this.getMessage(model); return { owner: model, msg, altMsg: this.getAltMessage(model) || (msg + ' (alt)'), val }; } },
     messageFn : function(model) { var label = model.$view.getLabelText(); return (label ? label : model.happyType) + ' is required.'; }
   };
 
