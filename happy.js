@@ -5,7 +5,7 @@ window.$happy = window.$happy || {};
 
   $happy.lang = {}; $happy.nextIds = [];
 
-  function t(msgID, message) { var mt = happy.lang[msgID]; return mt ? mt : message; }
+  function lang(msgID, message) { var mt = happy.lang[msgID]; return mt ? mt : message; }
   function clone(obj) { return obj ? extend(new obj.constructor, obj, 'deep') : obj; }
   function empty(obj) { for (var i in obj) { if (obj[i] !== undefined) { return false; } } return true; }
   function copy(val) { return isExtendable(val) ? ( val.constructor === Object ? clone(val) : val.slice(0) ) : val; }
@@ -97,7 +97,6 @@ window.$happy = window.$happy || {};
     this.el = this.getEl(); this.el.HAPPY = this;
     this.id = this.opts.id || this.getId();
     this.childNodes = []; this.children = this.getChildren();
-    //console.log('Construct Happy Element! this:', this);
     this.triggerEvent('onInit');
   }
   HappyElement.prototype = {
@@ -125,8 +124,7 @@ window.$happy = window.$happy || {};
       return children;
     },
     triggerEvent: function(eventName, args) { var r, handlers = this[eventName] || {};
-      for (var i in handlers) { var handler = handlers[i];
-        if (typeof handler === 'function' && (r = handler.apply(this, args))) { return r; } } },
+      for (var i in handlers) { var handler = handlers[i]; if (typeof handler === 'function' && (r = handler.apply(this, args))) { return r; } } },
     addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el); },
     reset: function() { var initialVal = this.$state.reset(); this.$view.setVal(initialVal); },
   };
@@ -143,7 +141,7 @@ window.$happy = window.$happy || {};
         } this.set('value', val); return val; },
       setHappy: function(val) { return this.set('isHappy', val); },
       setModified: function(val) { return this.set('isModified', val); },
-      getVal: function() { var val = this.get('value'); /*console.log('STATE::getVal(), id:', this.model.id, ', val =', val);*/ return val; },
+      getVal: function() { var val = this.get('value'); return val; },
       getHappy: function() { return this.get('isHappy', true); },
       getErrors: function(deep) { var children = this.model.children, errors = [];
         if(deep) { children.forEach(function(c) { errors = errors.concat(c.$state.getErrors(deep)); }); }
@@ -154,19 +152,14 @@ window.$happy = window.$happy || {};
       format: function(val) { return val; },
       isLabel: function(el) { return el && el.nodeName === 'LABEL'; },
       parse: function(val) { return (val || val === 0) ? val : undefined; },
-      getVal: function() { var val = {}, model = this.model; //console.log('$view::getVal() - start, id:', model.id);
+      getVal: function() { var val = {}, model = this.model;
         if (model.children.length > 1) { model.children.forEach(function(child){ val[child.id] = child.$view.getVal(); }); }
-        else { val = model.children.length ? model.children[0].$view.getVal() : this.parse(model.el.value); }
-        //console.log('$view::getVal() - done, val =', val);
-        return val; },
-      getLabelText: function() {
-        var model = this.model, el = model.el, elParent = model.parent ? model.parent.el : el.parentElement, elLabel;
+        else { val = model.children.length ? model.children[0].$view.getVal() : this.parse(model.el.value); } return val; },
+      getLabelText: function() { var model = this.model, el = model.el, elParent = model.parent ? model.parent.el : el.parentElement, elLabel;
         if (model.happyType === 'input') { elLabel = this.isLabel(el.previousElementSibling) ? el.previousElementSibling
           : (this.isLabel(el.nextElementSibling) ? el.nextElementSibling : elParent.querySelector('label')); }
         else { elLabel = this.isLabel(el.firstElementChild) ? el.firstElementChild : el.querySelector('label'); }
-        model.label = elLabel ? elLabel.innerHTML : el.getAttribute('data-label');
-        // window.console.log('gelLabel(), label:', model.label, ', elLabel:', elLabel, ', elParent:', elParent, ', el:', el);
-        return model.label; },
+        model.label = elLabel ? elLabel.innerHTML : el.getAttribute('data-label'); return model.label; },
       getUnhappyInput: function() { return this.model.el.querySelector('.input.unhappy,.field.unhappy input'); },
       getErrorInput: function(error) { var el = error.owner.el; return el.classList.contains('.input') ? el : el.querySelector('.input'); },
       getValidators: function() { return this.model.el.hasAttribute('required') ? [new Validator('required', Required)] : []; },
@@ -183,26 +176,21 @@ window.$happy = window.$happy || {};
       renderVal: function(val) { var self = this, children = this.model.children;
         if (!children.length) { this.model.el.value = this.format(val?val:''); }
         else if (children.length === 1) { children[0].$view.renderVal(this.format(val?val:'')); }
-        else if (typeof val === 'object') {
-          children.forEach(function(child) { child.$view.renderVal(self.format(val?val[child.id]:'')); });
-        } return val; },
+        else if (typeof val === 'object') { children.forEach(function(child) {
+          child.$view.renderVal(self.format(val?val[child.id]:'')); }); } return val; },
     },
     calcModified: function(reason, event, opts) { return this.$state.getVal() != this.$state.get('initialVal'); },
-    childrenModified: function(reason, event, opts) { /*console.log('childrenModified()');*/ for (var i = 0; i < this.children.length; i++) {
+    childrenModified: function(reason, event, opts) { for (var i = 0; i < this.children.length; i++) {
       if (this.children[i].$state.getModified()) { return true; } } return false; },
     updateModified: function(reason, event, opts) { var modified = false, self = this;
-      //console.log('updateModified(), reason:', reason, ', this:', this.id);
       var modified = (this.children.length > 0) ? this.childrenModified(reason, event, opts) : this.calcModified(reason, event, opts);
       if (this.$state.getModified() !== modified && (!this.onModified || !this.onModified(modified))) {
-        this.$state.setModified(modified); this.$view.renderModified(modified); }
-      return modified;
-    },
+        this.$state.setModified(modified); this.$view.renderModified(modified); } return modified; },
     validate: function(reason, event, opts) { var errors = [], self = this; this.validators.forEach(function(validator) {
       var err = validator.validate(self, reason, event, opts); if (err) { errors.push(err); } }); return errors; },
-    childrenHappy: function(reason, event, opts) { //console.log('childrenHappy(), id:', this.id);
-      for (var i = 0; i < this.children.length; i++) { if(!this.children[i].$state.getHappy()) { return false; } } return true; },
+    childrenHappy: function(reason, event, opts) { for (var i = 0; i < this.children.length; i++) {
+      if (!this.children[i].$state.getHappy()) { return false; } } return true; },
     updateHappy: function(reason, event, opts, childAsked) { var errors = [], happy = true, self = this;
-      //console.log('updateHappy(), reason:', reason, ', childAsked:', childAsked, ', this:', this.id);
       if (this.children.length === 0) { errors = this.validate(reason, event, opts); happy = !errors.length; } else {
         if (childAsked) { happy = this.childrenHappy(reason, event, opts); }
         else { this.children.forEach(function(child){ if (!child.updateHappy(reason, event, opts, childAsked)) { happy = false; } }); }
@@ -212,49 +200,38 @@ window.$happy = window.$happy || {};
       this.$state.set('errors', errors);
       return happy;
     },
-    calcValue: function(reason, event, opts) { var v; // console.log('calcValue() - start, id:', this.id);
+    calcValue: function(reason, event, opts) { var v;
       if (this.children.length > 1) { v = {}; this.children.forEach(function(c){ v[c.id] = c.$state.getVal(); }); }
-      else { v = this.children[0].$state.getVal(); } /*console.log('calcValue() - done, val =', v);*/ return v; },
-    updateValue: function(reason, event, opts) { //console.log('updateValue(), reason:', reason, ', this:', this.id);
-      var val = (this.children.length > 0) ? this.calcValue(reason, event, opts) : this.$view.getVal();
-      this.$state.setVal(val, reason); return val; },
-    update: function(reason, event, opts, childAsked) {
-      //console.log('update(), reason:', reason, ', childAsked:', childAsked, ', this:', this.id);
-      opts = opts || {}; var val, modified, happy, init = (reason === 'init');
-      val = this.updateValue(reason, event, opts);
-      modified = init ? false : this.updateModified(reason, event, opts, childAsked);
-      happy = init ? true : this.updateHappy(reason, event, opts, childAsked);
-      //console.log('update(), modified:', modified, ', happy:', happy, ', errors:', this.$state.getErrors());
-      if (!init && this.parent && this.parent.update) { this.parent.update(reason, event, opts, 'childAsked'); }
-      return happy;
-    },
+      else { v = this.children[0].$state.getVal(); } return v; },
+    updateValue: function(reason, event, opts) { var val = (this.children.length > 0) ? this.calcValue(reason, event, opts)
+      : this.$view.getVal(); this.$state.setVal(val, reason); return val; },
+    update: function(reason, event, opts, childAsked) { opts = opts || {}; var init = (reason === 'init'),
+      val = this.updateValue(reason, event, opts), modified = init ? false : this.updateModified(reason, event, opts, childAsked),
+      happy = init ? true : this.updateHappy(reason, event, opts, childAsked); if (!init && this.parent && this.parent.update) {
+        this.parent.update(reason, event, opts, 'childAsked'); } if (reason === 'onBlur' && !childAsked) { this.showErrors(); } return happy; },
     removeErrors: function(selector, opts) { this.$view.removeMessages(selector || this.getO('errMsgSelector', '.message.error'), opts); },
     showErrors: function(opts) { opts = opts || {}; var self = this, errors; this.removeErrors(opts.selector, opts);
       errors = opts.errors || this.$state.getErrors('deep'); errors.forEach(function(error) {
         if (!opts.onlySummary) { opts.alt = false; error.owner.$view.renderError(error, opts); }
         if (opts.showSummary) { opts.alt = true; self.$view.renderError(error, opts); } }); },
-    onInit: { validatable: function() { this.$state.set('messages', []);
-      this.validators = this.getO('validators') || this.$view.getValidators(); var iv = this.getO('initialValue');
-      if (iv !== undefined) { this.$state.setVal(iv, 'init', 'deep'); this.$view.renderVal(iv); } else { this.update('init'); } }
-    },
+    onInit: { validatable: function() { this.validators = this.getO('validators') || this.$view.getValidators();
+      var iv = this.getO('initialValue'); if (iv !== undefined) { this.$state.setVal(iv, 'init', 'deep');
+      this.$view.renderVal(iv); } else { this.update('init'); } } },
   };
 
 
   //////// FORM /////////
-  var Form = extendCloneOf(Validatable, { happyType: 'form', messagesContext: 'self', msgMountStyle: 'append',
+  var Form = extendCloneOf(Validatable, { happyType: 'form',
     addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child; this.update('init'); },
     onFocus: function(event) { var input = event.target.HAPPY; if (!input||input.children.length) { return; }
       var field = input.parent, form = field.parent; input.touched = true; field.touched = true; form.currentField = field; }, // console.log('onFocus:', field.id, input.id);
     onBlur: function(event) { var input = event.target.HAPPY; if (!input||input.children.length) { return; }
-      var field = input.parent, form = field.parent; rateLimit(input, input.update, ['onBlurInput', event], 200); }, // console.log('onBlur:', field.id, input.id);
-    bindEvents: function() { this.el.addEventListener('focus', this.onFocus, true);
-      this.el.addEventListener('blur', this.onBlur, true); },
-    unbindEvents: function() { this.el.removeEventListener('blur', this.onBlur, true);
-      this.el.removeEventListener('focus', this.onFocus, true); },
-    opts: { selector: 'form', childSelector: '.field', defaultChildType: 'Field' },
+      var field = input.parent, form = field.parent; rateLimit(input, input.update, ['onBlur', event], 200); }, // console.log('onBlur:', field.id, input.id);
+    bindEvents: function() { this.el.addEventListener('focus', this.onFocus, true); this.el.addEventListener('blur', this.onBlur, true); },
+    unbindEvents: function() { this.el.removeEventListener('blur', this.onBlur, true); this.el.removeEventListener('focus', this.onFocus, true); },
+    opts: { selector: 'form', childSelector: '.field', defaultChildType: 'Field', messagesContext: 'self', msgMountStyle: 'append' },
     onInit: { form: function() { var self = this; this.fields = {};
-      this.children.forEach(function(child) { self.fields[child.id] = child; });
-      this.bindEvents(); } },
+      this.children.forEach(function(child) { self.fields[child.id] = child; }); this.bindEvents(); } },
   });
 
 
@@ -274,12 +251,12 @@ window.$happy = window.$happy || {};
   ////// REQUIRED VALIDATOR ///////
   var Required = {
     validateFn: function(model) { var val = model.$state.getVal(); if (val === undefined || empty(val)) {
-      var msg = this.getMessage(model); return { owner: model, msg, altMsg: this.getAltMessage(model) || (msg + ' (alt)'), val }; } },
+      var msg = this.getMessage(model); return { owner: model, msg, altMsg: this.getAltMessage(model) || msg, val }; } },
     messageFn : function(model) { var label = model.$view.getLabelText(); return (label ? label : model.happyType) + ' is required.'; }
   };
 
 
-  extend($happy, { HappyElement, Validator, Validatable, Form, Field, Input, isExtendable,
-    isArray, empty, extend, clone, copy, extendCloneOf, rateLimit, upperFirst, t });
+  extend($happy, { HappyElement, View, State, Validator, Validatable, Form, Field, Input, isArray,
+    isExtendable, empty, extend, clone, copy, extendCloneOf, rateLimit, upperFirst, lang });
 
 }(window.$happy));
