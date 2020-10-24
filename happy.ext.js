@@ -136,10 +136,10 @@ window.$happy = window.$happy || {};
 
         const parts = {};
 
-        const el = document.createElement('div');
+        const el = document.createElement('fieldset');
 
-        parts.fieldLabel = document.createElement('label');
-        parts.widgetContainer = document.createElement('fieldset');
+        parts.fieldLabel = document.createElement('legend');
+        parts.widgetContainer = document.createElement('div');
         parts.street      = document.createElement('div');
         parts.streetLabel = document.createElement('label');
         parts.streetInput = document.createElement('input');
@@ -155,12 +155,13 @@ window.$happy = window.$happy || {};
 
         el.className = 'field';
         el.setAttribute('data-type', 'StreetAddress');
-        parts.fieldLabel.innerHTML = this.label || 'I\'m an ADDRESS';
+        parts.fieldLabel.innerHTML = this.label || 'Street Address';
         parts.widgetContainer.className = 'input-widget';
 
         parts.street.className = 'input-container';
         parts.streetLabel.innerHTML = this.streetLabel || 'Street Name';
         parts.streetInput.className = 'input';
+        parts.streetInput.setAttribute('required', '');
 
         parts.street.appendChild(parts.streetLabel);
         parts.street.appendChild(parts.streetInput);
@@ -224,7 +225,7 @@ window.$happy = window.$happy || {};
         el.setAttribute('data-type', 'Note');
 
         parts.label = document.createElement('label');
-        parts.label.innerHTML = 'I\'m a NOTE';
+        parts.label.innerHTML = 'Note';
         parts.label.style.display='block';
 
         parts.input = document.createElement('textarea');

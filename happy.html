@@ -4,68 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Happy JS</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-    }
-    h1 {
-      margin: 0;
-      color: crimson;
-    }
-    .field, fieldset > .input-container {
-      margin: 1rem 0;
-    }
-    .input-group label {
-      display: block;
-    }
-    header {
-      padding: 0.5rem 1rem;
-    }
-    main {
-      padding: 0 1rem;
-
-    }
-    footer {
-      background-color: whitesmoke;
-      margin-top: 2rem;
-      padding: 1rem;
-    }
-    .status-bar {
-      background-color: gainsboro;
-      line-height: 1.5em;
-      height: 1.5em;
-      display: flex;
-    }
-    .show-if-unhappy {
-      color: red;
-      display: none;
-    }
-    .unhappy .show-if-unhappy {
-      display: inline-block;
-      flex: 1;
-      text-align: center;
-      background-color: red;
-      color: white;
-    }
-    .show-if-modified {
-      color: green;
-      display: none;
-    }
-    .modified .show-if-modified {
-      display: inline-block;
-      background-color: green;
-      color: white;
-      flex: 1;
-      text-align: center;
-    }
-    .field.unhappy > label,
-    label.unhappy,
-    input.unhappy {
-      color: red;
-    }
-  </style>
+  <link rel="stylesheet" href="happy.css">
 </head>
 <body>
   <header>
@@ -92,9 +31,9 @@
           <button type="button" class="toggle">CAL</button>
         </div>
       </div>
-      <div id="fullname_1" class="field fullname" data-type="FullName">
-        <label>Full Name</label>
-        <fieldset class="input-widget">
+      <fieldset id="fullname_1" class="field fullname" data-type="FullName">
+        <legend>Full Name</legend>
+        <div class="input-widget">
           <div class="input-container">
             <label>First Name</label>
             <input class="input" name="form[firstname]" value="" required>
@@ -103,8 +42,8 @@
             <label>Last Name</label>
             <input class="input" name="form[lastname]" value="Moller">
           </div>
-        </fieldset>
-      </div>
+        </div>
+      </fieldset>
       <div id="question_1" class="field" data-type="RadioList" required>
         <label>Question 1</label>
         <div class="input-group radio-group">

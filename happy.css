@@ -1,0 +1,89 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+h1 {
+  margin: 0;
+  color: crimson;
+}
+header {
+  padding: 0.5rem 1rem;
+}
+main {
+  padding: 0 1rem;
+}
+footer {
+  background-color: whitesmoke;
+  margin-top: 2rem;
+  padding: 1rem;
+}
+fieldset label {
+  display: inline-block;
+  width: 100px;
+}
+fieldset .input-container
+{
+  margin: 0.5rem 0;
+}
+.field {
+  margin: 1rem 0;
+}
+.input-group label {
+  display: block;
+}
+.status-bar {
+  background-color: gainsboro;
+  line-height: 1.5em;
+  height: 1.5em;
+  display: flex;
+}
+.show-if-modified {
+  color: green;
+  display: none;
+}
+.modified .show-if-modified {
+  display: inline-block;
+  background-color: green;
+  color: white;
+  flex: 1;
+  text-align: center;
+}
+.show-if-unhappy {
+  color: red;
+  display: none;
+}
+.unhappy .show-if-unhappy {
+  display: inline-block;
+  flex: 1;
+  text-align: center;
+  background-color: red;
+  color: white;
+}
+.input {
+  border: 1px solid;
+  padding: 2px 5px;
+}
+.input:focus {
+  outline: 1px solid;
+}
+label.modified,
+.field.modified > label,
+.modified[data-type="RadioList"],
+.modified[data-type="CheckList"] {
+  color: #4CAF50;
+}
+.input.modified {
+  color: #4CAF50;
+  border: 1px solid #8BC34A;
+}
+label.unhappy,
+.field.unhappy > label,
+.unhappy[data-type="RadioList"],
+.unhappy[data-type="CheckList"] {
+  color: red;
+}
+.input.unhappy {
+  color: red;
+  border: 1px solid red;
+}
