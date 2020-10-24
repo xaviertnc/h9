@@ -87,3 +87,12 @@ label.unhappy,
   color: red;
   border: 1px solid red;
 }
+.errors .message:first-child {
+  margin-top: 1em;
+}
+.error.message {
+  color: red;
+  font-size: 0.75em;
+  font-style: italic;
+  padding-top: 0.2em;
+}

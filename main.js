@@ -15,27 +15,18 @@ console.log('$happy:', $happy);
 //// APPLICATION
 var elQ2 = document.getElementById('question_2');
 var streetAddress = { street: 'My Street', suburb: 'My Suburb', city: 'My City', code: '127' };
-var form = new $happy.HappyElement(F1, { as: $happy.Form });
+var form = new $happy.HappyElement(F1, { as: $happy.Form, msgAnchorSelector: '.errors' });
 
 form.addEl(new $happy.HappyElement(form, { as: $happy.StreetAddress, elMountAnchor: elQ2, mountStyle: 'before', selector: null, initialValue: streetAddress }));
 form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMountAnchor: elQ2, mountStyle: 'after', selector: null, initialValue: 'Hello World!' }));
 
 form.onSubmit = function(elForm, event) {
-	var form = this, elUnhappy, unhappy, errors = [];
+	var form = this, elUnhappyInput;
 	form.update('onSubmit', event);
-  if (elUnhappy = form.$view.getUnhappyInput()) {
-  	unhappy = elUnhappy.HAPPY;
-  	console.log('onSubmit(), unhappy =', unhappy);
-  	console.log('onSubmit(), elUnhappy =', elUnhappy);
-		errors = form.$state.getErrors('deep');
-	  console.log('onSubmit(), Errors =', errors);
-	  form.clearErrors();
-	  errors.forEach(function(error) {
-	  	console.log('onSubmit(), error =', error);
-	  	var errMsg = form.$view.renderError(error, form.messageTypes.summary);
-	  	console.log('onSubmit(), errMsg =', errMsg);
-	  });
-  	elUnhappy.focus();
+  if (elUnhappyInput = form.$view.getUnhappyInput()) {
+  	console.log('onSubmit(), elUnhappyInput =', elUnhappyInput, elUnhappyInput.HAPPY);
+	  form.showErrors({ showSummary: true, onlySummary: false });
+  	elUnhappyInput.focus();
   }
   event.preventDefault();
 };

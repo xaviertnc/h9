@@ -53,11 +53,20 @@ window.$happy = window.$happy || {};
     findEl: function(selector, elContext, elDefault) { elContext = elContext || document;
       return selector ? elContext.querySelector(selector) : elDefault; },
     findElAll: function(selector, elContext) { elContext = elContext || document;
-      return elContext.querySelectorAll(selector); },
+      // console.log('findElAll(), selector:', selector, ', elContext:', elContext, ', id:', this.model ? this.model.id : 'na');
+      return selector ? elContext.querySelectorAll(selector) : []; },
     getType: function(el, defaultType) {
       var type = el.getAttribute('data-type'); if (type) { return type; }
       type = el.getAttribute('type'); if (type) { return upperFirst(type); }
       return defaultType; },
+    getMessagesContext: function(opts) { opts = opts || {}; var m = this.model; context = opts.messagesContext ||
+      m.getO('messagesContext', 'parent'); return (context === 'parent') ? m.el.parentElement : m.el; },
+    getMessageAnchor: function(opts) { opts = opts || {}; var m = this.model,
+      anchorSelector = opts.anchorSelector || m.getO('msgAnchorSelector'), elContext = this.getMessagesContext(opts);
+      //console.log('getMessageAnchor()', anchorSelector, elContext);
+      return anchorSelector ? View.prototype.findEl(anchorSelector, elContext) : m.el; },
+    getMessages: function(selector, opts) { return View.prototype.findElAll(
+      selector || this.model.getO('msgSelector', '.message'), this.getMessagesContext(opts)); },
     make: function(id, className, tag) { var el = document.createElement(tag || 'div');
       if (id) { el.id = id; } if (className) { el.className = className; } return el; },
     mount: function(elAnchor, mountStyle, el) { el = el || this.make();
@@ -65,6 +74,13 @@ window.$happy = window.$happy || {};
       case 'before': elAnchor.parentElement.insertBefore(el, elAnchor); break;
       case 'after': elAnchor.parentElement.insertBefore(el, elAnchor.nextSibling); break;
       default: elAnchor.appendChild(el); } return el; },
+    renderMessage: function(msgText, opts) { opts = opts || {}; var m = this.model,
+      elMsg = View.prototype.make(opts.id || nextId('msg'), opts.className || m.getO('msgClassName', 'message' +
+        (opts.type ? ' ' + opts.type : '')), opts.tag || m.getO('msgTag')); elMsg.innerHTML = msgText;
+      View.prototype.mount(opts.elAnchor || this.getMessageAnchor(opts), opts.mountStyle ||
+        m.getO('msgMountStyle', 'after'), elMsg); return elMsg; },
+    removeMessages: function(selector, opts) { var msgs = this.getMessages(selector, opts);
+      msgs.forEach(function(elMsg){ View.prototype.remove(elMsg); }); },
     remove: function(el) { return el.parentElement.removeChild(el); }
   };
 
@@ -116,31 +132,15 @@ window.$happy = window.$happy || {};
   };
 
 
-  //////// ERROR MESSAGE /////////
-  var ErrorMessage = { happyType: 'error_message', $view: { make: function() { var m = this.model,
-      className = m.getO('className', 'message error' + (m.type ? ' ' + m.type : '')),
-      el = View.prototype.make(m.getO('id') || nextId('err'), className); el.innerHTML = m.msgText; return el; }, },
-    getAnchorContext: function(t, elErr) { return (t.anchorContext === 'parent') ? elErr.parentElement : (elErr || window.document); },
-    getAnchorEl: function(t, elAnchorContext) { console.log('getAnchorEl(), t:', t, ', elAnchorContext:', elAnchorContext, this); return t.anchorSelector ? elAnchorContext.querySelector(t.anchorSelector) : elAnchorContext; },
-    beforeInit: { errorMessage: function(opts) { var e = opts.error, t = opts.msgType || {};
-      if (!this.elMountAnchor) { this.elMountAnchor = this.getAnchorEl(t, this.getAnchorContext(t, e.owner.el)); }
-      this.owner = e.owner; this.msgText = t.alt ? e.altMsg : e.msg; this.type = t.id; delete opts.error; delete opts.msgType; } },
-  };
-
-
   ////// VALIDATABLE ///////
   var Validatable = { happyType: 'validatable',
     $state: {
       setVal: function(val, reason, deep) { var children = this.model.children;
-        //console.log('STATE::setVal(), id:', this.model.id, ', val =', val, ', reason =', reason, ', deep =', deep?'yes':'no');
         if (reason === 'init') { this.set('initialVal', val); val = copy(val); }
         if (deep && children.length) {
           if (children.length === 1) { children[0].$state.setVal(val, reason); }
-          else { children.forEach(function(child) { child.$state.setVal((typeof val==='object')?val[child.id]:val, reason, deep); }); }
-        }
-        this.set('value', val);
-        //console.log('$state::setVal(), id:', this.model.id, ', val =', val, ', init =', init);
-        return val; },
+          else { children.forEach(function(child) { child.$state.setVal((typeof val==='object') ? val[child.id] : val, reason, deep); }); }
+        } this.set('value', val); return val; },
       setHappy: function(val) { return this.set('isHappy', val); },
       setModified: function(val) { return this.set('isModified', val); },
       getVal: function() { var val = this.get('value'); /*console.log('STATE::getVal(), id:', this.model.id, ', val =', val);*/ return val; },
@@ -148,8 +148,7 @@ window.$happy = window.$happy || {};
       getErrors: function(deep) { var children = this.model.children, errors = [];
         if(deep) { children.forEach(function(c) { errors = errors.concat(c.$state.getErrors(deep)); }); }
         errors = errors.concat(this.get('errors', [])); return errors; },
-      getModified: function() { return this.get('isModified', false); },
-      getMessages: function() { return this.get('messages', []); },
+      getModified: function() { return this.get('isModified', false); }
     },
     $view: {
       format: function(val) { return val; },
@@ -168,8 +167,6 @@ window.$happy = window.$happy || {};
         model.label = elLabel ? elLabel.innerHTML : el.getAttribute('data-label');
         // window.console.log('gelLabel(), label:', model.label, ', elLabel:', elLabel, ', elParent:', elParent, ', el:', el);
         return model.label; },
-      getMessages: function(selector) { return this.model.el.querySelectorAll(selector || this.model.getO('messageSelector', '.message')); },
-      removeMessages: function(selector) { var msgs = this.getMessages(selector); msgs.forEach(function(elMsg){ View.prototype.remove(elMsg); }); },
       getUnhappyInput: function() { return this.model.el.querySelector('.input.unhappy,.field.unhappy input'); },
       getErrorInput: function(error) { var el = error.owner.el; return el.classList.contains('.input') ? el : el.querySelector('.input'); },
       getValidators: function() { return this.model.el.hasAttribute('required') ? [new Validator('required', Required)] : []; },
@@ -177,21 +174,19 @@ window.$happy = window.$happy || {};
         if (this.isLabel(el.previousElementSibling)) { el.previousElementSibling.classList.toggle('modified', isModified); } },
       renderHappy: function(isHappy) { var el = this.model.el; el.classList.toggle('unhappy', !isHappy);
         if (this.isLabel(el.previousElementSibling)) { el.previousElementSibling.classList.toggle('unhappy', !isHappy); } },
-        // validate: { anchorSelector: '.input', mount: 'after', context: 'parent', alt: 0 }
-      renderError: function(error, msgType, className, id) { console.log('renderError(), error =', error, ', msgType =', msgType, ', this.model =', this.model);
-        var msgs = this.model.$state.getMessages(), msg = new HappyElement(this.model, { as: ErrorMessage, error, msgType, className, id });
-        console.log('renderError(), msg =', msg); msgs.push(msg); return msg; },
+      renderError: function(error, opts) { opts = opts || {}; var m = this.model;
+        opts.elAnchor = opts.elAnchor || m.getO('elErrMsgAnchor'); opts.mountStyle = opts.mountStyle || m.getO('errMsgMountStyle');
+        opts.className = opts.className || m.getO('errMsgClassName', 'message error' + (opts.type ? ' ' + opts.type : ''));
+        opts.tag = opts.tag || m.getO('errMsgTag'); opts.messagesContext = opts.messagesContext || m.getO('errMsgsContext');
+        opts.anchorSelector = opts.anchorSelector || m.getO('errMsgAnchorSelector');
+        return this.renderMessage(opts.alt ? error.altMsg : error.msg, opts); },
       renderVal: function(val) { var self = this, children = this.model.children;
-          if (!children.length) { this.model.el.value = this.format(val?val:''); }
-          else if (children.length === 1) { children[0].$view.renderVal(this.format(val?val:'')); }
-          else if (typeof val === 'object') {
-            children.forEach(function(child) { child.$view.renderVal(self.format(val?val[child.id]:'')); }); }
-        //console.log('view::renderVal(), id:', this.model.id, ', val =', val);
-        return val; },
+        if (!children.length) { this.model.el.value = this.format(val?val:''); }
+        else if (children.length === 1) { children[0].$view.renderVal(this.format(val?val:'')); }
+        else if (typeof val === 'object') {
+          children.forEach(function(child) { child.$view.renderVal(self.format(val?val[child.id]:'')); });
+        } return val; },
     },
-    clearErrors: function(msgSelector, depth) { var depth = depth ? depth + 1 : 0; if (this.children.length) {
-      this.children.forEach(function(child){ child.clearErrors(msgSelector, depth); }); } this.$state.set('errors', []);
-      this.$state.set('messages', []); if (depth === 0) { this.$view.removeMessages(); } },
     calcModified: function(reason, event, opts) { return this.$state.getVal() != this.$state.get('initialVal'); },
     childrenModified: function(reason, event, opts) { /*console.log('childrenModified()');*/ for (var i = 0; i < this.children.length; i++) {
       if (this.children[i].$state.getModified()) { return true; } } return false; },
@@ -233,18 +228,20 @@ window.$happy = window.$happy || {};
       if (!init && this.parent && this.parent.update) { this.parent.update(reason, event, opts, 'childAsked'); }
       return happy;
     },
+    removeErrors: function(selector, opts) { this.$view.removeMessages(selector || this.getO('errMsgSelector', '.message.error'), opts); },
+    showErrors: function(opts) { opts = opts || {}; var self = this, errors; this.removeErrors(opts.selector, opts);
+      errors = opts.errors || this.$state.getErrors('deep'); errors.forEach(function(error) {
+        if (!opts.onlySummary) { opts.alt = false; error.owner.$view.renderError(error, opts); }
+        if (opts.showSummary) { opts.alt = true; self.$view.renderError(error, opts); } }); },
     onInit: { validatable: function() { this.$state.set('messages', []);
-      this.messageTypes = { error: { id: 'validate', anchorSelector: '.input', anchorContext: 'self', mountStyle: 'after', alt: 0 },
-        summary: { id: 'summary', anchorSelector: '.error-summary', anchorContext: 'self', mountStyle: 'append', alt: 1 } };
       this.validators = this.getO('validators') || this.$view.getValidators(); var iv = this.getO('initialValue');
-      if (iv !== undefined) { this.$state.setVal(iv, 'init', 'deep'); this.$view.renderVal(iv); }
-      else { this.update('init'); } }
+      if (iv !== undefined) { this.$state.setVal(iv, 'init', 'deep'); this.$view.renderVal(iv); } else { this.update('init'); } }
     },
   };
 
 
   //////// FORM /////////
-  var Form = extendCloneOf(Validatable, { happyType: 'form',
+  var Form = extendCloneOf(Validatable, { happyType: 'form', messagesContext: 'self', msgMountStyle: 'append',
     addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child; this.update('init'); },
     onFocus: function(event) { var input = event.target.HAPPY; if (!input||input.children.length) { return; }
       var field = input.parent, form = field.parent; input.touched = true; field.touched = true; form.currentField = field; }, // console.log('onFocus:', field.id, input.id);
@@ -282,7 +279,7 @@ window.$happy = window.$happy || {};
   };
 
 
-  extend($happy, { HappyElement, Validator, Validatable, Form, Field, Input, ErrorMessage, isExtendable,
+  extend($happy, { HappyElement, Validator, Validatable, Form, Field, Input, isExtendable,
     isArray, empty, extend, clone, copy, extendCloneOf, rateLimit, upperFirst, t });
 
 }(window.$happy));
