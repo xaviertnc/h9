@@ -17,22 +17,19 @@ window.$happy = window.$happy || {};
       else { objTarget[prop] = srcVal; } } return objTarget; }
   function isArray(obj) { return (/Array/).test(Object.prototype.toString.call(obj)); }
   function isExtendable(v) { return v !== undefined && typeof v === 'object' && v !== null && v.nodeName === undefined; }
-  function nextId(g) { $happy.nextIds[g] = $happy.nextIds[g] || 1; return g + '_' + $happy.nextIds[g]++; }
-  function rateLimit(context, fn, params, interval) { const date = new Date(), now = date.getTime();
-    if ((now - (context.lastUpdated || 0)) > interval) { context.lastUpdated = now; fn.apply(context, params); } }
+  function nextId(g) { $happy.nextIds[g] = $happy.nextIds[g] || 1; return g + $happy.nextIds[g]++; }
   function upperFirst(string) { return string[0].toUpperCase() + string.slice(1); }
+
 
   /////// HAPPY VALIDATOR ////////
   function Validator(id, props) {
     this.id = id; this.validateFn = props.validateFn;
     this.messageFn = props.messageFn || function () { return this.message = 'invalid'; };
-    this.altMessageFn = props.altMessageFn; // E.g. For summary display
     this.argsFn = props.argsFn || function () { return props.args || []; };
   }
   Validator.prototype = { happyType: 'validator',
     validate: function(model, reason, event) { return this.validateFn(model, reason, event); },
     getMessage: function(model, reason, event) { return this.messageFn(model, reason, event); },
-    getAltMessage: function(model, reason, event) { return this.altMessageFn ? this.altMessageFn(model, reason, event): ''; },
     getArgs: function(model, reason, event) { return this.argsFn(model, reason, event); }
   };
 
@@ -53,34 +50,31 @@ window.$happy = window.$happy || {};
     findEl: function(selector, elContext, elDefault) { elContext = elContext || document;
       return selector ? elContext.querySelector(selector) : elDefault; },
     findElAll: function(selector, elContext) { elContext = elContext || document;
-      // console.log('findElAll(), selector:', selector, ', elContext:', elContext, ', id:', this.model ? this.model.id : 'na');
       return selector ? elContext.querySelectorAll(selector) : []; },
-    getType: function(el, defaultType) {
-      var type = el.getAttribute('data-type'); if (type) { return type; }
-      type = el.getAttribute('type'); if (type) { return upperFirst(type); }
-      return defaultType; },
-    getMessagesContext: function(opts) { opts = opts || {}; var m = this.model; context = opts.messagesContext ||
-      m.getO('messagesContext', 'parent'); return (context === 'parent') ? m.el.parentElement : m.el; },
-    getMessageAnchor: function(opts) { opts = opts || {}; var m = this.model,
-      anchorSelector = opts.anchorSelector || m.getO('msgAnchorSelector'), elContext = this.getMessagesContext(opts);
-      //console.log('getMessageAnchor()', anchorSelector, elContext);
-      return anchorSelector ? View.prototype.findEl(anchorSelector, elContext) : m.el; },
-    getMessages: function(selector, opts) { return View.prototype.findElAll(
-      selector || this.model.getO('msgSelector', '.message'), this.getMessagesContext(opts)); },
+    getType: function(el, defaultType) { var type = el.getAttribute('data-type'); if (type) { return type; }
+      type = el.getAttribute('type'); if (type) { return upperFirst(type); } return defaultType; },
+    getContextEl: function(anchor) { var m = this.model; return anchor.elContext ||
+      (anchor.context === 'parent' ? m.el.parentElement : m.el); },
+    getAnchorEl: function(anchor) { return anchor.elMount || View.prototype.findEl(
+      anchor.selector, this.getContextEl(anchor)) || this.getContextEl(anchor); },
+    getMessages: function() { var m = this.model; return View.prototype.findElAll(
+      m.getO('msgsSelector', '.messages') + '.' + m.id, this.getContextEl(m.getO('msgsAnchor', {}))); },
     make: function(id, className, tag) { var el = document.createElement(tag || 'div');
       if (id) { el.id = id; } if (className) { el.className = className; } return el; },
-    mount: function(elAnchor, mountStyle, el) { el = el || this.make();
-      elAnchor = elAnchor || document.body; switch(mountStyle) {
+    mount: function(anchor, el) { el = el || this.model.el; var elAnchor = this.getAnchorEl(anchor);
+      // console.log('mount(), m:', this.model, ', anchor:', anchor, ', el:', el, ', elAnchor:', elAnchor);
+      switch(anchor.mountStyle) { case 'prepend': elAnchor.prepend(el); break;
       case 'before': elAnchor.parentElement.insertBefore(el, elAnchor); break;
       case 'after': elAnchor.parentElement.insertBefore(el, elAnchor.nextSibling); break;
-      default: elAnchor.appendChild(el); } return el; },
-    renderMessage: function(msgText, opts) { opts = opts || {}; var m = this.model,
-      elMsg = View.prototype.make(opts.id || nextId('msg'), opts.className || m.getO('msgClassName', 'message' +
-        (opts.type ? ' ' + opts.type : '')), opts.tag || m.getO('msgTag')); elMsg.innerHTML = msgText;
-      View.prototype.mount(opts.elAnchor || this.getMessageAnchor(opts), opts.mountStyle ||
-        m.getO('msgMountStyle', 'after'), elMsg); return elMsg; },
-    removeMessages: function(selector, opts) { var msgs = this.getMessages(selector, opts);
-      msgs.forEach(function(elMsg){ View.prototype.remove(elMsg); }); },
+      default: elAnchor.append(el); } return el; },
+    renderMessages: function(msgs, anchor) { msgs = msgs || []; if (!msgs.length) { return; }
+      var m = this.model, elMsgs = View.prototype.make(nextId('msgs'), 'messages ' + m.id);
+      anchor = anchor || m.getO('msgsAnchor', {}); this.mount(anchor, elMsgs);
+      msgs.forEach(function(msg){ elMsg = View.prototype.make(msg.id || nextId('msg'), (msg.className || 'message') +
+        (msg.type ? ' ' + msg.type : '')); elMsg.innerHTML = msg.text; elMsgs.appendChild(elMsg); }); },
+    removeMessages: function() { var msgs = this.getMessages();
+      // console.log('removeMessages(), id:', this.model.id, ', msgs:', msgs);
+      msgs.forEach(function(el){ View.prototype.remove(el); }); },
     remove: function(el) { return el.parentElement.removeChild(el); }
   };
 
@@ -95,6 +89,7 @@ window.$happy = window.$happy || {};
     if (this.triggerEvent('beforeInit', [opts])) { return; }
     this.opts = extend(this.opts || {}, opts); // Allows overriding ext optsions.
     this.el = this.getEl(); this.el.HAPPY = this;
+    // console.log('HappyElement::init(), el:', this.el);
     this.id = this.opts.id || this.getId();
     this.childNodes = []; this.children = this.getChildren();
     this.triggerEvent('onInit');
@@ -102,12 +97,10 @@ window.$happy = window.$happy || {};
   HappyElement.prototype = {
     happyType: 'element',
     getO: function(opt, defaultVal) { return this[opt] || this.opts[opt] || defaultVal; },
-    getId: function() { return this.el.id ? this.el.id : (this.opts.index ? this.happyType+'_'+this.opts.index : nextId(this.happyType)); },
-    getEl: function() { var el = this.getO('el'); if (el) { return el; }
-      var selector = this.getO('selector'), elContext = this.parent.el || document.body;
-      if (selector) { return this.$view.findEl(selector, elContext); }
-      return this.$view.mount(this.getO('elMountAnchor', elContext), this.getO('mountStyle'));
-    },
+    getId: function() { var pfx = this.parent.id ? (this.parent.id + '_' + this.happyType) : this.happyType;
+      return this.el.id ? this.el.id : (this.opts.index ? pfx+this.opts.index : nextId(pfx)); },
+    getEl: function() { var el = this.getO('el'); if (el) { return el; } var selector = this.getO('selector');
+      if (selector) { return this.$view.findEl(selector, this.parent.el || document); } return this.$view.make(); },
     getParent: function(happyType) { var self = this.parent; while (self) {
       if (self.happyType === happyType) { return self; } self = self.parent; } },
     getChildren: function() {
@@ -125,7 +118,8 @@ window.$happy = window.$happy || {};
     },
     triggerEvent: function(eventName, args) { var r, handlers = this[eventName] || {};
       for (var i in handlers) { var handler = handlers[i]; if (typeof handler === 'function' && (r = handler.apply(this, args))) { return r; } } },
-    addEl: function(self, happyElement) { self.children.push(happyElement); self.childNodes.push(happyElement.el); },
+    addEl: function(happyElement, mountAnchor) { this.$view.mount(mountAnchor || { elMount: this.el, mountStyle: 'append' }, happyElement.el);
+      this.children.push(happyElement); this.childNodes.push(happyElement.el); },
     reset: function() { var initialVal = this.$state.reset(); this.$view.setVal(initialVal); },
   };
 
@@ -137,14 +131,15 @@ window.$happy = window.$happy || {};
         if (reason === 'init') { this.set('initialVal', val); val = copy(val); }
         if (deep && children.length) {
           if (children.length === 1) { children[0].$state.setVal(val, reason); }
-          else { children.forEach(function(child) { child.$state.setVal((typeof val==='object') ? val[child.id] : val, reason, deep); }); }
+          else { children.forEach(function(child) { child.$state.setVal(
+            (typeof val==='object') ? val[child.id] : val, reason, deep); }); }
         } this.set('value', val); return val; },
       setHappy: function(val) { return this.set('isHappy', val); },
       setModified: function(val) { return this.set('isModified', val); },
       getVal: function() { var val = this.get('value'); return val; },
       getHappy: function() { return this.get('isHappy', true); },
-      getErrors: function(deep) { var children = this.model.children, errors = [];
-        if(deep) { children.forEach(function(c) { errors = errors.concat(c.$state.getErrors(deep)); }); }
+      getErrors: function() { var children = this.model.children, errors = [];
+        children.forEach(function(c) { errors = errors.concat(c.$state.getErrors()); });
         errors = errors.concat(this.get('errors', [])); return errors; },
       getModified: function() { return this.get('isModified', false); }
     },
@@ -167,13 +162,8 @@ window.$happy = window.$happy || {};
         if (this.isLabel(el.previousElementSibling)) { el.previousElementSibling.classList.toggle('modified', isModified); } },
       renderHappy: function(isHappy) { var el = this.model.el; el.classList.toggle('unhappy', !isHappy);
         if (this.isLabel(el.previousElementSibling)) { el.previousElementSibling.classList.toggle('unhappy', !isHappy); } },
-      renderError: function(error, opts) { opts = opts || {}; var m = this.model;
-        opts.elAnchor = opts.elAnchor || m.getO('elErrMsgAnchor'); opts.mountStyle = opts.mountStyle || m.getO('errMsgMountStyle');
-        opts.className = opts.className || m.getO('errMsgClassName', 'message error' + (opts.type ? ' ' + opts.type : ''));
-        opts.tag = opts.tag || m.getO('errMsgTag'); opts.messagesContext = opts.messagesContext || m.getO('errMsgsContext');
-        opts.anchorSelector = opts.anchorSelector || m.getO('errMsgAnchorSelector');
-        return this.renderMessage(opts.alt ? error.altMsg : error.msg, opts); },
       renderVal: function(val) { var self = this, children = this.model.children;
+        // console.log('renderVal(), val:', val, ', id:', this);
         if (!children.length) { this.model.el.value = this.format(val?val:''); }
         else if (children.length === 1) { children[0].$view.renderVal(this.format(val?val:'')); }
         else if (typeof val === 'object') { children.forEach(function(child) {
@@ -208,12 +198,8 @@ window.$happy = window.$happy || {};
     update: function(reason, event, opts, childAsked) { opts = opts || {}; var init = (reason === 'init'),
       val = this.updateValue(reason, event, opts), modified = init ? false : this.updateModified(reason, event, opts, childAsked),
       happy = init ? true : this.updateHappy(reason, event, opts, childAsked); if (!init && this.parent && this.parent.update) {
-        this.parent.update(reason, event, opts, 'childAsked'); } if (reason === 'onBlur' && !childAsked) { this.showErrors(); } return happy; },
-    removeErrors: function(selector, opts) { this.$view.removeMessages(selector || this.getO('errMsgSelector', '.message.error'), opts); },
-    showErrors: function(opts) { opts = opts || {}; var self = this, errors; this.removeErrors(opts.selector, opts);
-      errors = opts.errors || this.$state.getErrors('deep'); errors.forEach(function(error) {
-        if (!opts.onlySummary) { opts.alt = false; error.owner.$view.renderError(error, opts); }
-        if (opts.showSummary) { opts.alt = true; self.$view.renderError(error, opts); } }); },
+        this.parent.update(reason, event, opts, 'childAsked'); } if (!init && reason === 'onBlur') {
+          this.$view.removeMessages(); this.$view.renderMessages(this.$state.get('errors', [])); } return happy; },
     onInit: { validatable: function() { this.validators = this.getO('validators') || this.$view.getValidators();
       var iv = this.getO('initialValue'); if (iv !== undefined) { this.$state.setVal(iv, 'init', 'deep');
       this.$view.renderVal(iv); } else { this.update('init'); } } },
@@ -222,11 +208,13 @@ window.$happy = window.$happy || {};
 
   //////// FORM /////////
   var Form = extendCloneOf(Validatable, { happyType: 'form',
-    addEl: function(child) { HappyElement.prototype.addEl(this, child); this.fields[child.id] = child; this.update('init'); },
+    happy: function(reason, event, opts) { return this.update(reason, event, opts); },
+    addEl: function(child, anchor) { HappyElement.prototype.addEl.apply(this, [child, anchor]); this.fields[child.id] = child; this.update('init'); },
     onFocus: function(event) { var input = event.target.HAPPY; if (!input||input.children.length) { return; }
       var field = input.parent, form = field.parent; input.touched = true; field.touched = true; form.currentField = field; }, // console.log('onFocus:', field.id, input.id);
-    onBlur: function(event) { var input = event.target.HAPPY; if (!input||input.children.length) { return; }
-      var field = input.parent, form = field.parent; rateLimit(input, input.update, ['onBlur', event], 200); }, // console.log('onBlur:', field.id, input.id);
+    onBlur: function(event) { var input = event.target.HAPPY; if (!input || input.children.length) { return; }
+      var field = input.parent, form = field.parent, el = input.el, happy = input.update('onBlur', event); el.classList.toggle('happy', happy);
+      if (input.$view.isLabel(el.previousElementSibling)) { el.previousElementSibling.classList.toggle('happy', happy); } }, // console.log('onBlur:', field.id, input.id);
     bindEvents: function() { this.el.addEventListener('focus', this.onFocus, true); this.el.addEventListener('blur', this.onBlur, true); },
     unbindEvents: function() { this.el.removeEventListener('blur', this.onBlur, true); this.el.removeEventListener('focus', this.onFocus, true); },
     opts: { selector: 'form', childSelector: '.field', defaultChildType: 'Field', messagesContext: 'self', msgMountStyle: 'append' },
@@ -237,7 +225,7 @@ window.$happy = window.$happy || {};
 
   //////// FIELD /////////
   var Field = extendCloneOf(Validatable, { happyType: 'field',
-    opts: { selector: '.field', childSelector: '.input', defaultChildType: 'Input' },
+    opts: { childSelector: '.input', defaultChildType: 'Input' },
     onInit: { field: function() { var self = this; this.inputs = {};
       this.children.forEach(function(child) { self.inputs[child.id] = child; }); }
     },
@@ -245,18 +233,18 @@ window.$happy = window.$happy || {};
 
 
   //////// INPUT /////////
-  var Input = extendCloneOf(Validatable, { happyType: 'input', opts: { selector: '.input' } });
+  var Input = extendCloneOf(Validatable, { happyType: 'input', opts: { msgsAnchor: { context: 'parent' } }, });
 
 
   ////// REQUIRED VALIDATOR ///////
   var Required = {
-    validateFn: function(model) { var val = model.$state.getVal(); if (val === undefined || empty(val)) {
-      var msg = this.getMessage(model); return { owner: model, msg, altMsg: this.getAltMessage(model) || msg, val }; } },
-    messageFn : function(model) { var label = model.$view.getLabelText(); return (label ? label : model.happyType) + ' is required.'; }
+    messageFn : function(model) { var label = model.$view.getLabelText(); return (label ? label : model.happyType) + ' is required.'; },
+    validateFn: function(model) { var val = model.$state.getVal(); if (val === undefined || (typeof val === 'object' && empty(val))) {
+     return { owner: model, text: this.getMessage(model), type: 'error', val }; } },
   };
 
 
   extend($happy, { HappyElement, View, State, Validator, Validatable, Form, Field, Input, isArray,
-    isExtendable, empty, extend, clone, copy, extendCloneOf, rateLimit, upperFirst, lang });
+    isExtendable, empty, extend, clone, copy, extendCloneOf, upperFirst, lang });
 
 }(window.$happy));

@@ -34,7 +34,7 @@ window.$happy = window.$happy || {};
   //// RADIO LIST FIELD ////
   $happy.RadioList = $happy.extendCloneOf($happy.Field, {
 
-    happyType: 'radiolist', messagesContext: 'self', msgMountStyle: 'append',
+    happyType: 'radiolist',
 
     calcValue: function(reason, event, opts) { //console.log('RadioList::calcValue() - start, id:', this.id);
       var v, i, n = this.children.length;
@@ -66,7 +66,7 @@ window.$happy = window.$happy || {};
   //// CHECK LIST FIELD ////
   $happy.CheckList = $happy.extendCloneOf($happy.Field, {
 
-    happyType: 'checklist', messagesContext: 'self', msgMountStyle: 'append',
+    happyType: 'checklist',
 
     $view: {
       renderVal: function(val) {

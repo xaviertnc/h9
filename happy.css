@@ -39,12 +39,12 @@ fieldset .input-container
   display: flex;
 }
 .show-if-modified {
-  color: green;
+  color: blue;
   display: none;
 }
 .modified .show-if-modified {
   display: inline-block;
-  background-color: green;
+  background-color: blue;
   color: white;
   flex: 1;
   text-align: center;
@@ -67,15 +67,25 @@ fieldset .input-container
 .input:focus {
   outline: 1px solid;
 }
+label.happy,
+.field.happy > label,
+.happy[data-type="RadioList"],
+.happy[data-type="CheckList"] {
+  color: #4CAF50;;
+}
+.input.happy {
+  color: #4CAF50;
+  border: 1px solid #8BC34A;
+}
 label.modified,
 .field.modified > label,
 .modified[data-type="RadioList"],
 .modified[data-type="CheckList"] {
-  color: #4CAF50;
+  color: blue;
 }
 .input.modified {
-  color: #4CAF50;
-  border: 1px solid #8BC34A;
+  color: blue;
+  border: 1px solid blue;
 }
 label.unhappy,
 .field.unhappy > label,

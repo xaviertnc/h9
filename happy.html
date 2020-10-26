@@ -11,27 +11,27 @@
     <h1>Happy JS v9</h1>
   </header>
   <main>
-    <form method="POST" onsubmit="form.onSubmit(this, event)" novalidate>
-      <div class="status-bar">
+    <form method="POST" onsubmit="form.onSubmit(event)" novalidate>
+      <div class="status-bar top">
         <span class="show-if-unhappy">* Unhappy *</span>
         <span class="show-if-modified">* Modified *</span>
       </div>
       <div class="field" required>
-        <label>Field 1</label>
+        <label>Title</label>
         <div class="input-container">
-          <input class="input" name="form[v1]" value="" required>
+          <input class="input" name="form[title]" value="" required>
         </div>
       </div>
-      <div id="datetime_1" class="field datepicker" data-type="DatePicker">
+      <div id="date" class="field datepicker" data-type="DatePicker">
         <label>Field 2</label>
         <div class="input-widget">
           <span class="input-container">
-            <input class="input" name="form[v2]" value="">
+            <input class="input" name="form[date]" value="">
           </span>
           <button type="button" class="toggle">CAL</button>
         </div>
       </div>
-      <fieldset id="fullname_1" class="field fullname" data-type="FullName">
+      <fieldset id="fullname" class="field fullname" data-type="FullName">
         <legend>Full Name</legend>
         <div class="input-widget">
           <div class="input-container">
@@ -78,7 +78,7 @@
           </label>
         </div>
       </div>
-      <div class="status-bar">
+      <div class="status-bar bottom">
         <span class="show-if-unhappy">* Unhappy *</span>
         <span class="show-if-modified">* Modified *</span>
       </div>
@@ -86,7 +86,6 @@
       <div class="actions">
         <button type="submit">Submit</button>
       </div>
-      <div class="errors"></div>
     </form>
   </main>
   <footer>

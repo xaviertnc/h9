@@ -13,19 +13,19 @@ console.log('$happy:', $happy);
 
 
 //// APPLICATION
-var elQ2 = document.getElementById('question_2');
-var streetAddress = { street: 'My Street', suburb: 'My Suburb', city: 'My City', code: '127' };
-var form = new $happy.HappyElement(F1, { as: $happy.Form, msgAnchorSelector: '.errors' });
+var topMsgsAnchor = { id: 'top', context: 'self', selector: '.top', mountStyle: 'after' };
+var bottomMsgsAnchor = { id: 'bottom', context: 'self', selector: '.bottom', mountStyle: 'after' };
+var form = new $happy.HappyElement(F1, { as: $happy.Form });
 
-form.addEl(new $happy.HappyElement(form, { as: $happy.StreetAddress, elMountAnchor: elQ2, mountStyle: 'before', selector: null, initialValue: streetAddress }));
-form.addEl(new $happy.HappyElement(form, { as: $happy.Note, elMountAnchor: elQ2, mountStyle: 'after', selector: null, initialValue: 'Hello World!' }));
-
-form.onSubmit = function(elForm, event) {
-	var form = this, elUnhappyInput;
-	form.update('onSubmit', event);
-  if (elUnhappyInput = form.$view.getUnhappyInput()) {
+form.onSubmit = function(event) { var form = this;
+	if ( ! form.happy('onSubmit', event)) {
+    var elUnhappyInput = form.$view.getUnhappyInput();
   	console.log('onSubmit(), elUnhappyInput =', elUnhappyInput, elUnhappyInput.HAPPY);
-	  form.showErrors({ showSummary: true, onlySummary: false });
+  	var errors = form.$state.getErrors('deep');
+  	console.log('onSubmit(), messages =', errors);
+  	form.$view.removeMessages();
+	  form.$view.renderMessages(errors, topMsgsAnchor);
+	  form.$view.renderMessages(errors, bottomMsgsAnchor);
   	elUnhappyInput.focus();
   }
   event.preventDefault();
@@ -33,7 +33,13 @@ form.onSubmit = function(elForm, event) {
 
 form.onModified = function(modified) {
 	console.log('FORM SAYS: Hey, my status changed! Modified = ', modified ? 'YES' : 'NO');
-	// var submitBtn = this.el.querySelector('button[type="submit"]'); submitBtn.disabled = !modified;
 };
+
+var strAddrInitVal = { street: 'My Street', suburb: 'My Suburb', city: 'My City', code: '127' };
+var strAddrField = new $happy.HappyElement(form, { as: $happy.StreetAddress, initialValue: strAddrInitVal });
+var noteField = new $happy.HappyElement(form, { as: $happy.Note, initialValue: 'Hello World!' });
+
+form.addEl(strAddrField, { elMount: form.fields.question_2.el, mountStyle: 'before' });
+form.addEl(noteField, { elMount: form.fields.question_2.el, mountStyle: 'after' });
 
 console.log('form:', form);
