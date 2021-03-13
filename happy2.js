@@ -166,7 +166,7 @@
       if (updHappy) { updHappy = parent.updateStateType('unhappy', this.unhappy.length > 0, this.id); }
       if (updModified) { updModified = parent.updateStateType('modified', this.modified.length > 0, this.id); }
       //console.log('HappyItem.UPDATE-PARENT-STATES(), parent:', parent.id, ', parent.unhappyItems:', parent.unhappyItems, ', parent.lastUnhappy:',
-        //parent.lastUnhappy, ', parent.lastModified:', parent.lastModified);
+      //  parent.lastUnhappy, ', parent.lastModified:', parent.lastModified);
       if (updHappy || updModified) { parent.updateParentStates(); }
     },
     firstUnhappyChild: function () { var i, n = this.childItems.length; for (i = 0; i < n; i++) { if (this.childItems[i].unhappy) { return this.childItems[i]; } } },
@@ -209,8 +209,8 @@
     switch (this.type) {
     case 'radio':
     case 'checkbox': val = this.$elm.prop('checked') ? (this.$elm.val() || 1) : '';
-    //console.log('type:', this.type, ', val:', val);
-    break;
+      //console.log('type:', this.type, ', val:', val);
+      break;
     case 'option': val = this.$elm.prop('selected') ? (this.$elm.val() || 1) : ''; break;
     default:
       val = this.$elm.val();
@@ -225,30 +225,30 @@
     return (this.cachedValue = val);
   };
   HappyInput.prototype.setCurrentValue = function (currentValue) {
-    var happyInput = this;
+    var i, n, v, match, happyInput = this;
     switch (happyInput.type) {
-      case 'radio':
-      case 'checkbox':
-        //NOTE: We assume that each checkbox or radio input's value attribute
-        //      is set to some unique value for this to work.
-        //TODO: Check if we need to address single checkboxes with no value attr set.
-        if (currentValue && currentValue.length) {
-          var i, n = currentValue.length, v = happyInput.$elm.val(), match = false;
-          for (var i = 0; i < n; i++) { if (currentValue[i] === v) { match = true; break; } }
-          happyInput.$elm.prop('checked', match);
-        }
-        else { happyInput.$elm.prop('checked', happyInput.$elm.val() === currentValue); }
-        break;
-      case 'option':
-        if (currentValue && currentValue.length) {
-          var i, n = currentValue.length, v = happyInput.$elm.val(), match = false;
-          for (var i = 0; i < n; i++) { if (currentValue[i] === v) { match = true; break; } }
-          happyInput.$elm.prop('selected', match);
-        }
-        else { happyInput.$elm.prop('selected', happyInput.$elm.val() === currentValue); }
-        break;
-      case 'file': break;
-      default: happyInput.$elm[0].value = currentValue;
+    case 'radio':
+    case 'checkbox':
+      //NOTE: We assume that each checkbox or radio input's value attribute
+      //      is set to some unique value for this to work.
+      //TODO: Check if we need to address single checkboxes with no value attr set.
+      if (currentValue && currentValue.length) {
+        n = currentValue.length; v = happyInput.$elm.val(); match = false;
+        for (i = 0; i < n; i++) { if (currentValue[i] === v) { match = true; break; } }
+        happyInput.$elm.prop('checked', match);
+      }
+      else { happyInput.$elm.prop('checked', happyInput.$elm.val() === currentValue); }
+      break;
+    case 'option':
+      if (currentValue && currentValue.length) {
+        n = currentValue.length; v = happyInput.$elm.val(); match = false;
+        for (i = 0; i < n; i++) { if (currentValue[i] === v) { match = true; break; } }
+        happyInput.$elm.prop('selected', match);
+      }
+      else { happyInput.$elm.prop('selected', happyInput.$elm.val() === currentValue); }
+      break;
+    case 'file': break;
+    default: happyInput.$elm[0].value = currentValue;
     }
   };
   HappyInput.prototype.reset = function resetInputValue() {
@@ -363,20 +363,20 @@
     return inputs;
   };
   HappyField.prototype.findElement = function (query, referenceElement) {
-    var selectors, selectorArgs, selector, arg, i = 0, field = this, $target, $ref = referenceElement ? $(referenceElement) : null;
+    var selectors, selectorArgs,/*, selector,*/ arg, i = 0, field = this, $target, $ref = referenceElement ? $(referenceElement) : null;
     //console.log('HappyField.findElement(), query:', query, ', $ref:', $ref);
     if ( ! query || ! $ref) { return null; } // findElement params invalid
     if (query instanceof jQuery || typeof query === 'string' || query.nodeName) { $target = $(query); return $target.length ? $target : null; }
     selectors = castArray(query.selector); // selectors Array ['A','B','C'] => select A relative to $ref, then B rel to A, then C rel to B, etc.
     selectorArgs = castArray(query.arg); // e.g. selectors === ['next', 'find'], selectorArgs === ['tr', 'td']
     do { arg = selectorArgs[i];
-       switch (selectors[i]) {
-       case 'prev': $target = $.isNumeric(arg) ? $ref.prevAll().eq(arg) : (arg ? $ref.prevAll(arg).eq(0) : $ref.prev()); break;
-       case 'next': $target = $.isNumeric(arg) ? $ref.nextAll().eq(arg) : (arg ? $ref.nextAll(arg).eq(0) : $ref.next()); break;
-       case 'parent': $target = $.isNumeric(arg) ? $ref.parents().eq(arg) : (arg ? $ref.parents(arg).eq(0) : $ref.parent()); break;
-       case 'find': $target = $ref.find(arg).eq(0); break;
-       case 'field':  $target = field.$elm; break; }
-       $ref = $target; i++; }
+      switch (selectors[i]) {
+      case 'prev': $target = $.isNumeric(arg) ? $ref.prevAll().eq(arg) : (arg ? $ref.prevAll(arg).eq(0) : $ref.prev()); break;
+      case 'next': $target = $.isNumeric(arg) ? $ref.nextAll().eq(arg) : (arg ? $ref.nextAll(arg).eq(0) : $ref.next()); break;
+      case 'parent': $target = $.isNumeric(arg) ? $ref.parents().eq(arg) : (arg ? $ref.parents(arg).eq(0) : $ref.parent()); break;
+      case 'find': $target = $ref.find(arg).eq(0); break;
+      case 'field':  $target = field.$elm; break; }
+      $ref = $target; i++; }
     while (i < selectors.length);
     return ($target && $target.length) ? $target : null;
   };
@@ -423,7 +423,7 @@
     }
     this.ancestor.updateDOM.call(this);
   };
-  HappyField.showError = function (errorText, errorType) {
+  HappyField.showError = function (errorText, errorType) { var field = this;
     this.error.type = errorType; this.error.message.text = errorText;
     field.unhappy = 'yes'; field.updateParentStates(); field.updateDOM();
   };

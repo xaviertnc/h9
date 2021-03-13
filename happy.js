@@ -5,7 +5,7 @@ window.$happy = window.$happy || {};
 
   $happy.lang = {}; $happy.nextIds = [];
 
-  function lang(msgID, message) { var mt = happy.lang[msgID]; return mt ? mt : message; }
+  function lang(msgID, message) { var mt = $happy.lang[msgID]; return mt ? mt : message; }
   function clone(obj) { return obj ? extend(new obj.constructor, obj, 'deep') : obj; }
   function empty(obj) { for (var i in obj) { if (obj[i] !== undefined) { return false; } } return true; }
   function copy(val) { return isExtendable(val) ? ( val.constructor === Object ? clone(val) : val.slice(0) ) : val; }
@@ -70,7 +70,7 @@ window.$happy = window.$happy || {};
     renderMessages: function(msgs, anchor) { msgs = msgs || []; if (!msgs.length) { return; }
       var m = this.model, elMsgs = View.prototype.make(nextId('msgs'), 'messages ' + m.id);
       anchor = anchor || m.getO('msgsAnchor', {}); this.mount(anchor, elMsgs);
-      msgs.forEach(function(msg){ elMsg = View.prototype.make(msg.id || nextId('msg'), (msg.className || 'message') +
+      msgs.forEach(function(msg){ var elMsg = View.prototype.make(msg.id || nextId('msg'), (msg.className || 'message') +
         (msg.type ? ' ' + msg.type : '')); elMsg.innerHTML = msg.text; elMsgs.appendChild(elMsg); }); },
     removeMessages: function() { var msgs = this.getMessages();
       // console.log('removeMessages(), id:', this.model.id, ', msgs:', msgs);
@@ -169,18 +169,18 @@ window.$happy = window.$happy || {};
         else if (typeof val === 'object') { children.forEach(function(child) {
           child.$view.renderVal(self.format(val?val[child.id]:'')); }); } return val; },
     },
-    calcModified: function(reason, event, opts) { return this.$state.getVal() != this.$state.get('initialVal'); },
-    childrenModified: function(reason, event, opts) { for (var i = 0; i < this.children.length; i++) {
+    calcModified: function(/*reason, event, opts*/) { return this.$state.getVal() != this.$state.get('initialVal'); },
+    childrenModified: function(/*reason, event, opts*/) { for (var i = 0; i < this.children.length; i++) {
       if (this.children[i].$state.getModified()) { return true; } } return false; },
-    updateModified: function(reason, event, opts) { var modified = false, self = this;
-      var modified = (this.children.length > 0) ? this.childrenModified(reason, event, opts) : this.calcModified(reason, event, opts);
-      if (this.$state.getModified() !== modified && (!this.onModified || !this.onModified(modified))) {
-        this.$state.setModified(modified); this.$view.renderModified(modified); } return modified; },
+    updateModified: function(reason, event, opts) { var modified = (this.children.length > 0)
+      ? this.childrenModified(reason, event, opts) : this.calcModified(reason, event, opts);
+    if (this.$state.getModified() !== modified && (!this.onModified || !this.onModified(modified))) {
+      this.$state.setModified(modified); this.$view.renderModified(modified); } return modified; },
     validate: function(reason, event, opts) { var errors = [], self = this; this.validators.forEach(function(validator) {
       var err = validator.validate(self, reason, event, opts); if (err) { errors.push(err); } }); return errors; },
-    childrenHappy: function(reason, event, opts) { for (var i = 0; i < this.children.length; i++) {
+    childrenHappy: function(/*reason, event, opts*/) { for (var i = 0; i < this.children.length; i++) {
       if (!this.children[i].$state.getHappy()) { return false; } } return true; },
-    updateHappy: function(reason, event, opts, childAsked) { var errors = [], happy = true, self = this;
+    updateHappy: function(reason, event, opts, childAsked) { var errors = [], happy = true;
       if (this.children.length === 0) { errors = this.validate(reason, event, opts); happy = !errors.length; } else {
         if (childAsked) { happy = this.childrenHappy(reason, event, opts); }
         else { this.children.forEach(function(child){ if (!child.updateHappy(reason, event, opts, childAsked)) { happy = false; } }); }
@@ -190,19 +190,19 @@ window.$happy = window.$happy || {};
       this.$state.set('errors', errors);
       return happy;
     },
-    calcValue: function(reason, event, opts) { var v;
+    calcValue: function(/*reason, event, opts*/) { var v;
       if (this.children.length > 1) { v = {}; this.children.forEach(function(c){ v[c.id] = c.$state.getVal(); }); }
       else { v = this.children[0].$state.getVal(); } return v; },
     updateValue: function(reason, event, opts) { var val = (this.children.length > 0) ? this.calcValue(reason, event, opts)
       : this.$view.getVal(); this.$state.setVal(val, reason); return val; },
-    update: function(reason, event, opts, childAsked) { opts = opts || {}; var init = (reason === 'init'),
-      val = this.updateValue(reason, event, opts), modified = init ? false : this.updateModified(reason, event, opts, childAsked),
-      happy = init ? true : this.updateHappy(reason, event, opts, childAsked); if (!init && this.parent && this.parent.update) {
+    update: function(reason, event, opts, childAsked) { opts = opts || {}; var init = (reason === 'init');
+      this.updateValue(reason, event, opts); if (!init) { this.updateModified(reason, event, opts, childAsked); }
+      var happy = init ? true : this.updateHappy(reason, event, opts, childAsked); if (!init && this.parent && this.parent.update) {
         this.parent.update(reason, event, opts, 'childAsked'); } if (!init && reason === 'onBlur') {
-          this.$view.removeMessages(); this.$view.renderMessages(this.$state.get('errors', [])); } return happy; },
+        this.$view.removeMessages(); this.$view.renderMessages(this.$state.get('errors', [])); } return happy; },
     onInit: { validatable: function() { this.validators = this.getO('validators') || this.$view.getValidators();
       var iv = this.getO('initialValue'); if (iv !== undefined) { this.$state.setVal(iv, 'init', 'deep');
-      this.$view.renderVal(iv); } else { this.update('init'); } } },
+        this.$view.renderVal(iv); } else { this.update('init'); } } },
   };
 
 
@@ -213,7 +213,7 @@ window.$happy = window.$happy || {};
     onFocus: function(event) { var input = event.target.HAPPY; if (!input||input.children.length) { return; }
       var field = input.parent, form = field.parent; input.touched = true; field.touched = true; form.currentField = field; }, // console.log('onFocus:', field.id, input.id);
     onBlur: function(event) { var input = event.target.HAPPY; if (!input || input.children.length) { return; }
-      var field = input.parent, form = field.parent, el = input.el, happy = input.update('onBlur', event); el.classList.toggle('happy', happy);
+      var /*field = input.parent, form = field.parent,*/ el = input.el, happy = input.update('onBlur', event); el.classList.toggle('happy', happy);
       if (input.$view.isLabel(el.previousElementSibling)) { el.previousElementSibling.classList.toggle('happy', happy); } }, // console.log('onBlur:', field.id, input.id);
     bindEvents: function() { this.el.addEventListener('focus', this.onFocus, true); this.el.addEventListener('blur', this.onBlur, true); },
     unbindEvents: function() { this.el.removeEventListener('blur', this.onBlur, true); this.el.removeEventListener('focus', this.onFocus, true); },
@@ -240,7 +240,7 @@ window.$happy = window.$happy || {};
   var Required = {
     messageFn : function(model) { var label = model.$view.getLabelText(); return (label ? label : model.happyType) + ' is required.'; },
     validateFn: function(model) { var val = model.$state.getVal(); if (val === undefined || (typeof val === 'object' && empty(val))) {
-     return { owner: model, text: this.getMessage(model), type: 'error', val }; } },
+      return { owner: model, text: this.getMessage(model), type: 'error', val }; } },
   };
 
 

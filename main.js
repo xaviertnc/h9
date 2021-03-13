@@ -1,3 +1,5 @@
+/* globals F1, $happy */
+
 /**
  * Welcome to Happy JS Test
  * C. Moller
@@ -18,21 +20,21 @@ var bottomMsgsAnchor = { id: 'bottom', context: 'self', selector: '.bottom', mou
 var form = new $happy.HappyElement(F1, { as: $happy.Form });
 
 form.onSubmit = function(event) { var form = this;
-	if ( ! form.happy('onSubmit', event)) {
+  if ( ! form.happy('onSubmit', event)) {
     var elUnhappyInput = form.$view.getUnhappyInput();
-  	console.log('onSubmit(), elUnhappyInput =', elUnhappyInput, elUnhappyInput.HAPPY);
-  	var errors = form.$state.getErrors('deep');
-  	console.log('onSubmit(), messages =', errors);
-  	form.$view.removeMessages();
-	  form.$view.renderMessages(errors, topMsgsAnchor);
-	  form.$view.renderMessages(errors, bottomMsgsAnchor);
-  	elUnhappyInput.focus();
+    console.log('onSubmit(), elUnhappyInput =', elUnhappyInput, elUnhappyInput.HAPPY);
+    var errors = form.$state.getErrors('deep');
+    console.log('onSubmit(), messages =', errors);
+    form.$view.removeMessages();
+    form.$view.renderMessages(errors, topMsgsAnchor);
+    form.$view.renderMessages(errors, bottomMsgsAnchor);
+    elUnhappyInput.focus();
   }
   event.preventDefault();
 };
 
 form.onModified = function(modified) {
-	console.log('FORM SAYS: Hey, my status changed! Modified = ', modified ? 'YES' : 'NO');
+  console.log('FORM SAYS: Hey, my status changed! Modified = ', modified ? 'YES' : 'NO');
 };
 
 var strAddrInitVal = { street: 'My Street', suburb: 'My Suburb', city: 'My City', code: '127' };
