@@ -36,8 +36,8 @@ window.$happy = window.$happy || {};
 
     happyType: 'radiolist',
 
-    calcValue: function(reason, event, opts) { //console.log('RadioList::calcValue() - start, id:', this.id);
-      var v, i, n = this.children.length;
+    calcValue: function(/*reason, event, opts*/) { //console.log('RadioList::calcValue() - start, id:', this.id);
+      var i, n = this.children.length;
       for (i = 0; i < n; i++) { var c = this.children[i], v = c.$state.getVal(); if (v !== undefined) { break; } }
       //console.log('RadioList::calcValue() - done, val =', v);
       return v;
@@ -92,7 +92,7 @@ window.$happy = window.$happy || {};
     // NB: We don't need to re-define getValue, setVal, getVal if we stick to conventions
     // and give children ID's that match the value object's keys!
     // StreetAddress is done differently just to demonstrate what's possible.
-    calcValue: function(reason, event, opts) {
+    calcValue: function(/*reason, event, opts*/) {
       //console.log('StreetAddress::calcValue() - start, id:', this.id);
       var children = this.children, v = {
         street: children[0].$state.getVal(),

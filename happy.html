@@ -11,22 +11,22 @@
     <h1>Happy JS v9</h1>
   </header>
   <main>
-    <form method="POST" onsubmit="form.onSubmit(event)" novalidate>
-      <div class="status-bar top">
+    <form id="frmH9"method="POST" onsubmit="happyForm.trigger('submit', event)" novalidate>
+      <div class="status-bar top required">
         <span class="show-if-unhappy">* Unhappy *</span>
         <span class="show-if-modified">* Modified *</span>
       </div>
-      <div class="field" required>
+      <div class="field required">
         <label>Title</label>
         <div class="input-container">
           <input class="input" name="form[title]" value="" required>
         </div>
       </div>
-      <div id="date" class="field datepicker" data-type="DatePicker">
+      <div id="date" class="field datepicker required" data-type="DatePicker">
         <label>Field 2</label>
         <div class="input-widget">
           <span class="input-container">
-            <input class="input" name="form[date]" value="">
+            <input class="input" name="form[date]" value="" required>
           </span>
           <button type="button" class="toggle">CAL</button>
         </div>

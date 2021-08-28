@@ -1,0 +1,275 @@
+Validation
+----------
+
+Validate can be called on any "validatable" element.
+
+If the element has parent validatable element(s), the parent(s) have to be notified to update
+thier state based on the current state of their direct children and any top-level rules.
+
+Keep the concept of a DOC / MULITPLE FORMS out of this!
+If you want multiple forms, add your own high-level logic!
+
+
+
+When to VALIDATE?
+-----------------
+  Field:onExit
+  Input::onExit && Field::subValidate && !Input::noValidate
+  Form:onSubmit
+  Form::onInit
+
+  // Manual call...
+  Form.state::update(Form.view)         // Deep update Form.state using Form.view from the bottom up!
+  Form::validate('myGoodReason')
+
+
+
+Update Logic:
+-------------
+
+Validatable::update(reason, event, opts, childAsked)
+{
+  // Calculate the value from child values OR read it from the DOM if self is an INPUT
+  self.updateValue(reason, event, opts)
+
+  if (reason == 'init')
+  {
+    isHappy = true // We always START HAPPY!
+  }
+  Else {
+    self.updateModified(reason, event, opts, childAsked)
+    isHappy = self.updateHappy(reason, event, opts, childAsked);
+    if (self.parent AND self.parent.update)
+    {
+      self.parent.update(reason, event, opts, 'childAsked');
+    }
+  }
+  if (reason == 'onBlur')
+  {
+    self.$view.removeMessages();
+    self.$view.renderMessages(self.$state.get('errors', []));
+  }
+  RETURN isHappy
+}
+
+// NOTE: Only called if Validatable HAS CHILDREN!
+Validatable::calcValue()
+{
+  if (hasMoreThanOneChild)
+  {
+    Each.child({ arrValues[child.id] = child.getVal() })
+    RETURN arrValues;
+  }
+  Else
+  {
+    value = this.children[0].$state.getVal();
+    RETURN value
+  }
+}
+
+Validatable::updateValue(reason, event, opts)
+{
+  If (hasChildren)
+  {
+    value = self.calcValue(reason, event, opts)
+  }
+  Else
+  {
+    value = self.$view.getVal();
+  }
+  self.$state.setVal(value, reason);
+  RETURN value;
+}
+
+Validatable::updateHappy(reason, event, opts, childAsked)
+{
+  Set isHappy = true
+  Set arrErrors = []
+  If (self.hasNoChildren)
+  { // self == Lowest-level like INPUT
+    arrErrors = self.validate(reason, event, opts)
+  }
+  Else
+  { // self == High-level like FIELD or FORM
+    If (childAsked)
+    { // Assume children is already updated!
+      isHappy = self.childrenHappy(reason, event, opts)
+    }
+    Else
+    { // Set isHappy = false if any child is unhappy down the line.
+      Each.child::updateHappy(reason, event, opts, childAsked)
+    }
+    If (self.hasValidators)
+    { // We have a high-level element with high-level validators!
+      arrErrors = self.validate(reason, event, opts)
+    }
+  }
+  self.$state.set('errors', arrErrors);
+  If ( reason == 'restart' OR ( happyStateChanged AND NOT self.beforeUpdateHook(isHappy, arrErrors) ) )
+  {
+    // Force updating the DOM / $view when we update after reset / restart...
+    self.$state.setHappy(isHappy)
+    self.$view.renderHappy(isHappy)
+  }
+  RETURN isHappy
+}
+
+
+
+Validation Error:
+-----------------
+var error = {
+  owner: model,                           // model == HappyItem Instance. Use to get model.el etc...
+  text: validator.getMessage(model),      // Message text. Format and translate in getMessage()
+  val: model.$state.getVal(),             // Keep a snapshot of the value at the time of validation.
+  type: 'error'                           // Just to allow space for different kinds of errors?
+}
+
+
+Happy Hooks:
+------------
+Validatable::beforeUpdate(isHappyYesNo, arrValidationErrors) // Abort model state update if beforeUpdate returns a value!
+
+
+
+
+When to UPDATE THE MODEL STATE?
+-------------------------------
+Input::onChange() {
+  Input.state::update('onInput', Input.view) // Deep update Input.state using Input.view
+}
+Form::onSubmit() {
+  Form.state::update('onSubmit', Form.view)  // Deep update Form.state using Form.view
+  Form::validate('onSubmit')                 // onSubmit == Validate children, childAsked == No child validation!
+  Form.view.update('onSubmit', Form.state)   // Update Form VIEW value, modified, happy and messages
+}
+Element::init(opt) {
+  if (isset(opt.val)) {
+    Element.state.set('value', opt.val);
+    Element.view.setVal(opt.val);
+  }
+  else
+  {
+    val = Element.view.getVal();
+    Element.state.set('value', val);
+  }
+}
+
+
+Multi-value fields... Customize Input::setVal() to parse "val" as Field::val and only use the relevant part of it.
+   E.g. val.input1_subval /w val = json_parse('{"input1_subval":"100", ...}')
+
+
+Element.state::get() { Element::children.forEach(child=>child.state.get('value')) ... }
+Element.state::getModified() { Element::children.forEach(child=>child.state.getModified()) ... }
+Element.state::updateVal(reason, view) { view ? view.getVal() : Element.state::get('value'); Element.parent.state::updateVal() }
+Element.state::updateModified() { Element.state::getModified() + Element.parent::updateModified() }
+
+Element::validate(reason, event) {
+  Element.children.forEach(child=>child::validate(reason, event))
+  Element.validators.forEach(validator=>validator.validate())
+  Element.parent::validate('childAsked')
+}
+
+Element.state::update(reason, view) {
+  Element.state.updateVal(reason, view);
+  Element.state::updateModified();
+}
+
+Element.view::updateMessages(reason, messages) {
+}
+
+Element.view::update(reason, state) {
+  Element.el.value = state.get('value');
+  Element.view.updateModified(state.isModified);
+  Element.view.updateHappy(state.isHappy);
+  messages = Element::createMessages(reason, Element.errors, { scheme: firstError / lastError / allErrors|null });
+  Element.view.updateMessages(messages); // Add, Delete or update ... Needs unique ids?...
+}
+
+
+
+Updating state based on call from child element:
+
+  Re-calulate value, modified, errors and messages based on direct child states, without re-calculating any child states!
+
+  Validate self:
+    - Get child errors.
+    - Run own validator(s) if present. If in first-error mode, skip own validators if child error(s) already exit.
+    - Create messages based on first-error mode and summary mode (i.e. Only ONE error message or ALL. Create summary version(s)? )
+
+  Render state:
+  Render messages based on their type, message anchor points, mount styles and message rendering rules.
+  Rendering the updated state to DOM
+
+
+
+Get Value (REASON)
+  REASON == UPDATE: Get value from View
+  REASON == INIT: Get value from Options.val || View
+  Default: Get value from State
+
+Calc Value
+  Aggregate direct child values by default.  Can be something custom too.
+
+Update Value (REASON, DEEP)
+  Val = DEEP ? Get Value (UPDATE, DEEP) : Calc Value
+  REASON == INIT ? Init Value : Set Value
+  Call Update on Parent element. DEEP == FALSE
+
+Init Value (Special Case of Update Value)
+  Update Value (Reason = INIT)
+
+
+Getting values
+
+  On Submit, On Validate
+    - Get value from element $state
+
+  On Update
+    Update works from the calling element UP!  We don't drill down on updates!  We only update parents, if INIT == false!
+
+    DEEP: If update NOT requested by a child element, drill down through children and start updating values from the ground up.
+    !DEEP: If update requested by a child element, only go down one level and get the value from the direct child states!
+
+    On Initialize
+    - Get value from constructor opts.val or DOM if children = 0
+    - Get value from direct children states if children > 0
+    - Init own $state value
+    - Request update on parent element
+
+    On User Input + Input Value Modified
+    - Update value from DOM if children = 0
+    - Update value from direct children states if children > 0
+    - Set own $state value
+    - Request update on parent element
+
+
+
+getValue(REASON, DEEP)
+
+  REASON == Init:
+    children == 0:
+      getO('val', el.value)
+    else children > 0:
+      children.forEach(DEEP ? child.getValue(REASON, DEEP) : child.$state.getVal());
+
+  REASON == Update:
+
+    this.$state.setVal();
+    this.parent.update(!DEEP)
+
+  Default:
+
+
+
+Also Needed:
+
+  All messages must have a common selector or we need a view::getMessages() to get all the messages for any element.
+  An element's errors array contains its own errors as well as errors forwarded by its children or other elements.
+  An element's messages array only contains the messages it added itself! No messages added by children or other elements.
+
+  We need a way to give unique id's to messages, so we can detect if they exist and could rather be updated.
+
+  state::init() { init ? state.getSaved() || view.getVal() : model.getModified() }
+

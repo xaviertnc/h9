@@ -1,166 +1,224 @@
-Validation
-----------
+Happy JS Documentation v1.0
+===========================
 
-Validate can be called on any "validatable" element.
-
-If the element has parent validatable element(s), the parent(s) have to be notified to update
-thier state based on the current state of their direct children and any top-level rules.
-
-Keep the concept of a DOC / MULITPLE FORMS out of this!
-If you want multiple forms, add your own high-level logic!
+By: C. Moller - 16 May 2021
 
 
+Quick Start
+-----------
 
-When to VALIDATE?
+  #HTML
+  - Include happy.js
+  - Include happy.ext.js if required. (Extra Happy Element Types and Validators)
+  - Include happy.env.js if required. (Environment specific $happy customizations)
+
+  - Configure your target <form> tag with id, pjax class and onsubmit handler.  E.g.
+    <form id="myform" class="pjax" onsubmit="$happy.myForm.triggerEvent('onSubmit', event)" method="post" novalidate>
+
+  * Notice how the <form> tag-id also becomes a $happy property. It gets added when we run $happy.init()
+    to enable global access to your happy form instance.
+
+
+  #JS
+  - Add the following to your main JS script:
+
+    $happy.init();
+    - OR -
+    $happy.init( NamespaceObject );
+    - OR -
+    $happy.init(nsObj, options);
+
+      e.g. $happy.init(F1, { selector: '#myform', messagesContext: 'self', msgsPlacement: 'after' });
+
+
+
+Happy Init()
+------------
+
+/**
+ * $happy.init(parent, options)
+ *
+ * Create a new HappyElement instance based on the provided options.
+ *
+ * @param {object} parent   E.g. window.F1. Defaults to {}.
+ * @param {object} options  See defaults below.
+ */
+
+options (default) =
+{
+  as               : $happy.Form,  // {happy object type prototype} $happy.Form, $happy.MyCustomFormType
+  selector         : 'form',       // {string} 'form', '#my-form', '.main-form'
+  childSelector    : '.field',     // {string} '.field', '.form-field'
+  defaultChildType : 'Field',      // {string} 'Field', 'MyCustomFieldType'
+  msgsPlacement    : 'append'      // {string} 'append', 'prepend', 'before', 'after',
+  msgsAnchor       : undefined     // {anchor object},
+  msgsClass        : '.messages'   // {string},
+  msgClass         : '.message'    // {string},
+  validClass       : '.happy'      // {string},
+  invalidClass     : '.unhappy'    // {string},
+  modifiedClass    : '.modified'   // {string},
+  validators       : undefined     // {array of validator objects},
+  initialValue     : undefined     // {object}
+  ... more ...
+}
+
+Running init() with no params will auto detect the first available <form> tag
+as per the default settings above or fail.
+
+init() will add the resulting $happy.Form instance to $happy as a new property using the
+happy form ID as property name.
+
+If you have more than one <form> tag, make sure you give each <form> tag an id attribute and
+that you override the default 'selector' option on init. E.g.
+
+$happy.init(F1, { selector: '#main-form' });
+
+
+
+How to Access HAPPY Objects
+---------------------------
+
+ 1) Every happyElement.el gets assigned a HAPPY prop, where HAPPY == happyElement
+
+   e.g. var unhappyInput = elUnhappyInput.HAPPY
+
+
+ 2) The global $happy object contains the initial happy object (The one we ran $happy.init on)
+
+   e.g. $happy.init(F1, { selector: '#myForm'}) SETS $happy.myForm = myHappyFormInstance
+
+ 3) Access happy elements via their parent's children, fields or inputs property.
+
+   e.g. var happyField = happyForm.children[0]
+   e.g. var happyField = happyForm.fields.{fieldId}
+   e.g. var happyField = happyForm.fields.myForm_field1 (auto generated id)
+   e.g. var happyInput = happyField.inputs.firstname (id from DOM element id or init option)
+   e.g. var happyInput = happyField.inputs.myForm_field1_input1 (auto generated id)
+
+
+
+Happy Events
+------------
+
+To add an event handler:
+
+  happyObj.{MyEventName} = {
+    h1: function(args){...},
+    h2: function(args){...},
+    ...
+  }
+
+  e.g. $happy.myForm.init = {
+	      'handler1' : function(args){...},
+	      'handler2' : function(args){...},
+	      ...
+       }
+
+To trigger an event:
+
+  happyObj.trigger(eventName, args);
+
+  e.g. $happy.myForm.trigger('init', event);
+  e.g. $happy.myForm.trigger('init', [ event, arg2, arg3, ... ]);
+
+  e.g. $happy.myForm.trigger('submit');
+  e.g. $happy.myForm.trigger('submit', event);
+
+
+
+Validate
+--------
+
+var isHappy = $happy.myForm.happy('onSubmit', event);
+
+
+
+Error Mesages
+-------------
+
+var validationErrors = $happy.myForm.getErrors('deep');
+
+
+
+Validation Error
+----------------
+var error = {
+  owner: model,                           // model == HappyItem Instance. Use to get model.el etc...
+  text: validator.getMessage(model),      // Message text. Format and translate in getMessage()
+  val: model.$state.getVal(),             // Keep a snapshot of the value at the time of validation.
+  type: 'error'                           // Just to allow space for different kinds of errors?
+}
+
+
+
+Happy Hooks:
+------------
+beforeInit(opts)
+onUpdate(resultObj) // resultObj = { happy, modified, value, errors }, this = self
+
+
+Message Anchors
+---------------
+
+var anchorTop = { id: 'top', context: 'self', selector: '.summary-top'   , placement: 'append' };
+var anchorBtm = { id: 'btm', context: 'self', selector: '.summary-bottom', placement: 'append' };
+
+$happy.myForm.removeMessages();
+$happy.myForm.renderMessages(validationErrors, anchorTop);
+$happy.myForm.renderMessages(validationErrors, anchorBtm);
+
+
+
+Anchor Object
+-------------
+
+{
+  id         : {string} Unique identifier
+
+  elMount    : {HTMLElement}
+
+  context    : {string} 'self', 'parent' (Only search for messages within this element)
+  -OR-
+  elContext  : {HTMLElement}
+
+  selector   : {string} CSS Selector,
+  placement  : {string} 'append', 'prepend', 'before' or 'after'
+}
+
+
+
+Anchor Element Detection
+------------------------
+
+ 1) if (anchor.elMount) USE elMount
+ 2) if (anchor.elContext) USE elContext.find(selector) || elContext
+ 3) if (anchor.context == 'parent') SET elContext = model.el.parentElement; Goto step 2.
+ 4) if (anchor.context == 'self' or [anything else]) SET elContext = model.el; Goto step 2.
+ 5) if ( ! anchor.context ) SET elContext = model.el; Goto step 2.
+
+
+
+Mounting Happy Elements
+-----------------------
+
+/**
+ * happyElement.$view.mount(anchor, el)
+ *
+ * Insert args.el or happyElement.el into the DOM.
+ * Use args.anchor to define where and how to insert.
+ *
+ * @param  {object}      anchor  Where and how to mount. See Anchor Object notes above.
+ * @param  {DOMElement}  el      The DOM element to mount. Defaults to model.el if not set.
+ *
+ * @return {DOMElement}          The mounted DOM element.
+ */
+
+1) Get elToMount = args.el || this.model.el;
+2) Get elAnchor = this.getAnchorEl(args.anchor);
+3) Insert elToMount into the DOM relative to elAnchor using args.anchor.placement
+4) return elToMount
+
+
+
+Customizing Happy
 -----------------
-  Field:onExit
-  Input::onExit && Field::subValidate && !Input::noValidate
-  Form:onSubmit
-  Form::onInit
-
-  // Manual call...
-  Form.state::update(Form.view)         // Deep update Form.state using Form.view from the bottom up!
-  Form::validate('myGoodReason')
-
-
-
-When to UPDATE THE MODEL STATE?
--------------------------------
-Input::onChange() {
-  Input.state::update('onInput', Input.view) // Deep update Input.state using Input.view
-}
-Form::onSubmit() {
-  Form.state::update('onSubmit', Form.view)  // Deep update Form.state using Form.view
-  Form::validate('onSubmit')                 // onSubmit == Validate children, childAsked == No child validation!
-  Form.view.update('onSubmit', Form.state)   // Update Form VIEW value, modified, happy and messages
-}
-Element::init(opt) {
-  if (isset(opt.val)) {
-    Element.state.set('value', opt.val);
-    Element.view.setVal(opt.val);
-  }
-  else
-  {
-    val = Element.view.getVal();
-    Element.state.set('value', val);
-  }
-}
-
-
-Multi-value fields... Customize Input::setVal() to parse "val" as Field::val and only use the relevant part of it.
-   E.g. val.input1_subval /w val = json_parse('{"input1_subval":"100", ...}')
-
-
-Element.state::get() { Element::children.forEach(child=>child.state.get('value')) ... }
-Element.state::getModified() { Element::children.forEach(child=>child.state.getModified()) ... }
-Element.state::updateVal(reason, view) { view ? view.getVal() : Element.state::get('value'); Element.parent.state::updateVal() }
-Element.state::updateModified() { Element.state::getModified() + Element.parent::updateModified() }
-
-Element::validate(reason, event) {
-  Element.children.forEach(child=>child::validate(reason, event))
-  Element.validators.forEach(validator=>validator.validate())
-  Element.parent::validate('childAsked')
-}
-
-Element.state::update(reason, view) {
-  Element.state.updateVal(reason, view);
-  Element.state::updateModified();
-}
-
-Element.view::updateMessages(reason, messages) {
-}
-
-Element.view::update(reason, state) {
-  Element.el.value = state.get('value');
-  Element.view.updateModified(state.isModified);
-  Element.view.updateHappy(state.isHappy);
-  messages = Element::createMessages(reason, Element.errors, { scheme: firstError / lastError / allErrors|null });
-  Element.view.updateMessages(messages); // Add, Delete or update ... Needs unique ids?...
-}
-
-
-
-Updating state based on call from child element:
-
-  Re-calulate value, modified, errors and messages based on direct child states, without re-calculating any child states!
-
-  Validate self:
-    - Get child errors.
-    - Run own validator(s) if present. If in first-error mode, skip own validators if child error(s) already exit.
-    - Create messages based on first-error mode and summary mode (i.e. Only ONE error message or ALL. Create summary version(s)? )
-
-  Render state:
-  Render messages based on their type, message anchor points, mount styles and message rendering rules.
-  Rendering the updated state to DOM
-
-
-
-Get Value (REASON)
-  REASON == UPDATE: Get value from View
-  REASON == INIT: Get value from Options.val || View
-  Default: Get value from State
-
-Calc Value
-  Aggregate direct child values by default.  Can be something custom too.
-
-Update Value (REASON, DEEP)
-  Val = DEEP ? Get Value (UPDATE, DEEP) : Calc Value
-  REASON == INIT ? Init Value : Set Value
-  Call Update on Parent element. DEEP == FALSE
-
-Init Value (Special Case of Update Value)
-  Update Value (Reason = INIT)
-
-
-Getting values
-
-  On Submit, On Validate
-    - Get value from element $state
-
-  On Update
-    Update works from the calling element UP!  We don't drill down on updates!  We only update parents, if INIT == false!
-
-    DEEP: If update NOT requested by a child element, drill down through children and start updating values from the ground up.
-    !DEEP: If update requested by a child element, only go down one level and get the value from the direct child states!
-
-    On Initialize
-    - Get value from constructor opts.val or DOM if children = 0
-    - Get value from direct children states if children > 0
-    - Init own $state value
-    - Request update on parent element
-
-    On User Input + Input Value Modified
-    - Update value from DOM if children = 0
-    - Update value from direct children states if children > 0
-    - Set own $state value
-    - Request update on parent element
-
-
-
-getValue(REASON, DEEP)
-
-  REASON == Init:
-    children == 0:
-      getO('val', el.value)
-    else children > 0:
-      children.forEach(DEEP ? child.getValue(REASON, DEEP) : child.$state.getVal());
-
-  REASON == Update:
-
-    this.$state.setVal();
-    this.parent.update(!DEEP)
-
-  Default:
-
-
-
-Also Needed:
-
-  All messages must have a common selector or we need a view::getMessages() to get all the messages for any element.
-  An element's errors array contains its own errors as well as errors forwarded by its children or other elements.
-  An element's messages array only contains the messages it added itself! No messages added by children or other elements.
-
-  We need a way to give unique id's to messages, so we can detect if they exist and could rather be updated.
-
-  state::init() { init ? state.getSaved() || view.getVal() : model.getModified() }
-
