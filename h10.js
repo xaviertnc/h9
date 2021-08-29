@@ -30,9 +30,9 @@
 
     makeId() {
 
-      const type = this.type || 'elm';
-      if ( ! this.root.nextId[type]) { this.root.nextId[type] = 1; }
-      let id = type + this.root.nextId[type]++;
+      const happyType = this.happyType || 'elm';
+      if ( ! this.root.nextId[happyType]) { this.root.nextId[happyType] = 1; }
+      let id = happyType + this.root.nextId[happyType]++;
       if (this.parent.id) { id = this.parent.id + '_' + id; }
       // console.log('HappyItem::makeId(), id =', id);
       return id;
@@ -44,10 +44,10 @@
 
       options = options || {};
 
-      // console.log('New Happy Item', options);
+      // console.log('New Happy Item', parent, options);
 
       this.id = options.id;
-      this.type = options.type; delete options.type;
+      this.happyType = options.happyType; delete options.happyType;
       this.parent = parent || {};
       this.root = parent.root ? parent.root : this.parent;
       this.options = options;
@@ -69,7 +69,15 @@
     }
 
 
-    getValue() { return this.el.value; }
+    getValue(init) {
+
+      // console.log('HappyElement::getValue(', this.id, ')');
+      const val = this.el.value;
+      console.log('HappyElement::getValue(', this.id, ') val =', val, ', init =', (init ? 'Y' : 'N'));
+      if (init) { this.initialVal = val; }
+      return this.value = val;
+
+    }
 
 
     getLabelText() { return this.el.getAttribute('data-label'); }
@@ -178,13 +186,13 @@
     constructor(parent, options) {
 
       options = options || {};
-      options.type = options.type || 'input';
+      options.happyType = options.happyType || 'input';
       super(parent, options);
 
       this.getValidations();
 
-      this.value = this.getValue();
-      this.initialValue = this.value;
+      // this.value = this.getValue();
+      // this.initialValue = this.value;
 
     }
 
@@ -194,11 +202,15 @@
 
   class HappyField extends HappyElement {
 
-    getValue() {
+    getValue(init) {
 
+      // console.log('HappyField::getValue(', this.id, ')');
       const values = [];
-      this.inputs.forEach(input => values.push(input.getValue()));
-      return values.length ? values.join('|') : '';
+      this.inputs.forEach(input => { values.push(input.getValue(init)); });
+      const val = values.length ? values.join('|') : '';
+      console.log('HappyField::getValue(', this.id, ') val =', val, ', init =', (init ? 'Y' : 'N'));
+      if (init) { this.initialVal = val; }
+      return this.value = val;
 
     }
 
@@ -217,14 +229,14 @@
     constructor(parent, options) {
 
       options = options || {};
-      options.type = options.type || 'field';
+      options.happyType = options.happyType || 'field';
       super(parent, options);
 
       this.getInputs();
       this.getValidations();
 
-      this.value = this.getValue();
-      this.initialValue = this.value;
+      // this.value = this.getValue('init');
+      // this.initialValue = this.value;
     }
 
   }
@@ -233,13 +245,34 @@
 
   class HappyForm extends HappyElement {
 
+    getValue(init) {
+
+      const values = [];
+      // console.log('HappyForm::getValue(', this.id, ')');
+      this.fields.forEach(field => { values.push(field.getValue(init)); });
+      const val = values.length ? values.join('|') : '';
+      console.log('HappyForm::getValue(', this.id, ') val =', val, ', init =', (init ? 'Y' : 'N'));
+      if (init) { this.initialVal = val; }
+      return this.value = val;
+
+    }
+
 
     getFields() {
 
+      const self = this;
       const happyFields = [];
       const fieldSelector = this.getO('fieldSelector', '.field');
       const fieldElements = this.el.querySelectorAll(fieldSelector);
-      fieldElements.forEach(elField => happyFields.push(new HappyField(this, { el: elField})));
+
+      fieldElements.forEach(function(el) {
+        const type = el.getAttribute('data-type');
+        // console.log('Field Type =', type);
+        // if (type) { console.log('Field Type Class:', window[type]); }
+        const HappyClass = (type && window[type]) ? window[type] : HappyField;
+        happyFields.push(new HappyClass(self, {el}));
+      });
+
       this.fields = happyFields;
 
     }
@@ -247,7 +280,18 @@
 
     validate(reason, event) {
 
-      this.fields.forEach(field => field.validate(reason, event));
+      const self = this;
+      this.happy = true;
+      this.modified = false;
+      this.fields.forEach(function(field) {
+        field.validate(reason, event);
+        if ( ! field.happy) { self.happy = false; }
+        if ( field.modified ) { self.modified = true; }
+      });
+
+      if (this.happy) { super.validate(reason, event); }
+
+      return this.happy;
 
     }
 
@@ -299,14 +343,13 @@
     constructor(parent, options) {
 
       options = options || {};
-      options.type = options.type || 'form';
+      options.happyType = options.happyType || 'form';
       super(parent, options);
 
       this.getFields();
       this.getValidations();
 
-      this.value = this.getValue();
-      this.initialValue = this.value;
+      this.getValue('init');
 
       this.bindEvents();
 
@@ -343,6 +386,40 @@
     }
 
   }; // End: Happy Class
+
+
+
+  window.RadioList = class RadioList extends HappyField {
+
+    getValue(init) {
+
+      // console.log('RadioList::getValue(', this.id, ')');
+      let val; this.inputs.forEach(function(input) { if (input.el.checked) { val = input.getValue(init); } });
+      console.log('RadioList::getValue(', this.id, ') val =', val, ', init =', (init ? 'Y' : 'N'));
+      if (init) { this.initialVal = val; }
+      return val;
+
+    }
+
+  };
+
+
+
+  window.CheckList = class CheckList extends HappyField {
+
+    getValue(init) {
+
+      // console.log('CheckList::getValue(', this.id, ')');
+      const vals = [];
+      this.inputs.forEach(function(input) { if (input.el.checked) { vals.push(input.getValue(init)); } });
+      const val = vals.join('|');
+      console.log('CheckList::getValue(', this.id, ') val =', val, ', init =', (init ? 'Y' : 'N'));
+      if (init) { this.initialVal = val; }
+      return val;
+
+    }
+
+  };
 
 
 }(window));
