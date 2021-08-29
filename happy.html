@@ -11,19 +11,20 @@
     <h1>Happy JS v9</h1>
   </header>
   <main>
-    <form id="frmH9"method="POST" onsubmit="happyForm.trigger('submit', event)" novalidate>
+    <form method="POST" novalidate>
       <div class="status-bar top required">
         <span class="show-if-unhappy">* Unhappy *</span>
         <span class="show-if-modified">* Modified *</span>
       </div>
-      <div class="field required">
+      <div id="title" class="field required" data-label="Title" data-validate="title:4:10|not:fokker">
         <label>Title</label>
         <div class="input-container">
           <input class="input" name="form[title]" value="" required>
         </div>
       </div>
-      <div id="date" class="field datepicker required" data-type="DatePicker">
-        <label>Field 2</label>
+      <div class="field datepicker required" data-type="DatePicker" data-label="Date"
+        data-validate="date">
+        <label>Date</label>
         <div class="input-widget">
           <span class="input-container">
             <input class="input" name="form[date]" value="" required>
@@ -31,7 +32,8 @@
           <button type="button" class="toggle">CAL</button>
         </div>
       </div>
-      <fieldset id="fullname" class="field fullname" data-type="FullName">
+      <fieldset id="fullname" class="field fullname required" data-type="FullName" data-label="Full Name"
+        data-validate="fullname">
         <legend>Full Name</legend>
         <div class="input-widget">
           <div class="input-container">
@@ -40,11 +42,11 @@
           </div>
           <div class="input-container">
             <label>Last Name</label>
-            <input class="input" name="form[lastname]" value="Moller">
+            <input class="input" name="form[lastname]" value="Moller" required>
           </div>
         </div>
       </fieldset>
-      <div id="question_1" class="field" data-type="RadioList" required>
+      <div id="question1" class="field" data-type="RadioList" required>
         <label>Question 1</label>
         <div class="input-group radio-group">
           <label>
@@ -61,7 +63,7 @@
           </label>
         </div>
       </div>
-      <div id="question_2" class="field " data-type="CheckList" required>
+      <div id="question2" class="field " data-type="CheckList" required>
         <label>Question 2</label>
         <div class="input-group check-group">
           <label>
@@ -92,8 +94,7 @@
 <!--    <label>App State:</label>
    <pre><?=print_r($app->state, true)?></pre> -->
   </footer>
-  <script src="happy.js"></script>
-  <script src="happy.ext.js"></script>
-  <script src="main.js"></script>
+  <script src="h10.js"></script>
+  <script src="m10.js"></script>
 </body>
 </html>

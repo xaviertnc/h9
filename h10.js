@@ -12,11 +12,18 @@
 
   class HappyItem {
 
+    notEqual(a, b) {
+
+      return a !== b;
+
+    }
+
 
     getO(key, def) {
 
       return (typeof this.options[key] !== 'undefined') ? this.options[key]
-        : (this.root ? ((typeof this.root[key] !== 'undefined') ? this.root[key] : def) : def);
+        : (this.root ? ((typeof this.root.options[key] !== 'undefined')
+          ? this.root.options[key] : def) : def);
 
     }
 
@@ -27,7 +34,7 @@
       if ( ! this.root.nextId[type]) { this.root.nextId[type] = 1; }
       let id = type + this.root.nextId[type]++;
       if (this.parent.id) { id = this.parent.id + '_' + id; }
-      console.log('HappyItem::makeId(), id =', id);
+      // console.log('HappyItem::makeId(), id =', id);
       return id;
 
     }
@@ -37,7 +44,7 @@
 
       options = options || {};
 
-      console.log('New Happy Item', options);
+      // console.log('New Happy Item', options);
 
       this.id = options.id;
       this.type = options.type; delete options.type;
@@ -62,30 +69,24 @@
     }
 
 
-    getLabelText() {
-
-      return;
-
-    }
+    getValue() { return this.el.value; }
 
 
-    getValidators() {
-
-      return [];
-
-    }
+    getLabelText() { return this.el.getAttribute('data-label'); }
 
 
-    getValue() {
+    getValidations() {
 
-      return;
+      var strTests = this.el.getAttribute('data-validate');
+      var arrTests = strTests ? strTests.split('|') : [];
+      var validations = this.validations;
 
-    }
+      if (this.el.hasAttribute('required') || this.el.classList.contains('required')) {
+        validations.push({ test: 'required', args: [] }); }
 
-
-    updateValue() {
-
-      return;
+      arrTests.forEach(strTest => { var arrTest = strTest.split(':');
+        //console.log('arrTest', arrTest);
+        validations.push({ test: arrTest.shift(), args: arrTest }); });
 
     }
 
@@ -98,6 +99,13 @@
 
 
     updateModified() {
+
+      return;
+
+    }
+
+
+    updateParent() {
 
       return;
 
@@ -134,12 +142,15 @@
 
     validate(reason, event) {
 
-      const value = this.getValue();
-      switch(reason) {
-      case 'submit': break;
-
-      }
-      return event;
+      const o = this, latestValue = o.getValue(), tests = o.getO('validators', []);
+      o.modified = o.notEqual(o.value, latestValue); o.errors = [];
+      o.validations.forEach(function(vd) { var t = tests[vd.test];
+        const strError = t ? t(latestValue, o, vd.args, reason, event) : null;
+        if (strError) { o.errors.push(strError); } });
+      console.log('HappyElement(', o.id, ')::validate(', reason, '), errors:', o.errors);
+      o.happy = o.errors.length === 0;
+      o.value = latestValue;
+      return o.happy;
 
     }
 
@@ -152,8 +163,28 @@
       this.el = this.getO('el'); delete this.options.el;
       this.id = this.getId() || this.makeId(); delete options.id;
 
-      this.validators = [];
+      this.el.HAPPY = this;
+      this.validations = [];
       this.errors = [];
+
+    }
+
+  }
+
+
+
+  class HappyInput extends HappyElement {
+
+    constructor(parent, options) {
+
+      options = options || {};
+      options.type = options.type || 'input';
+      super(parent, options);
+
+      this.getValidations();
+
+      this.value = this.getValue();
+      this.initialValue = this.value;
 
     }
 
@@ -163,6 +194,25 @@
 
   class HappyField extends HappyElement {
 
+    getValue() {
+
+      const values = [];
+      this.inputs.forEach(input => values.push(input.getValue()));
+      return values.length ? values.join('|') : '';
+
+    }
+
+
+    getInputs() {
+
+      const happyInputs = [];
+      const inputSelector = this.getO('inputSelector', '.input');
+      const inputElements = this.el.querySelectorAll(inputSelector);
+      inputElements.forEach(elInput => happyInputs.push(new HappyInput(this, { el: elInput})));
+      this.inputs = happyInputs;
+
+    }
+
 
     constructor(parent, options) {
 
@@ -170,6 +220,11 @@
       options.type = options.type || 'field';
       super(parent, options);
 
+      this.getInputs();
+      this.getValidations();
+
+      this.value = this.getValue();
+      this.initialValue = this.value;
     }
 
   }
@@ -186,16 +241,6 @@
       const fieldElements = this.el.querySelectorAll(fieldSelector);
       fieldElements.forEach(elField => happyFields.push(new HappyField(this, { el: elField})));
       this.fields = happyFields;
-
-    }
-
-
-    getInitialValues() {
-
-    }
-
-
-    restoreInitialValues() {
 
     }
 
@@ -230,12 +275,13 @@
 
     onSubmit(event) {
 
-      console.log('HappyForm::onSubmit', event);
-      this.validate('submit', event);
-      if (this.errors.length) {
-        event.stopImmediatePropagation();
-        event.preventDefault();
-      }
+      const form = event.target.HAPPY;
+      console.log('HappyForm::onSubmit', event, form);
+      form.validate('submit', event);
+      // if (form.errors.length) {
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      // }
 
     }
 
@@ -257,7 +303,11 @@
       super(parent, options);
 
       this.getFields();
-      this.getValidators();
+      this.getValidations();
+
+      this.value = this.getValue();
+      this.initialValue = this.value;
+
       this.bindEvents();
 
     }
@@ -272,21 +322,20 @@
 
       console.log('New Happy');
       this.id = 'HAPPY';
-      this.options = {};
+      this.options = options || {};
       this.nextId = {};
       this.forms = [];
 
-      if (options) { this.init(options); }
+      this.init(options.formSelector, options.elContext);
 
     }
 
 
-    init(options) {
+    init(formSelector, elContext) {
 
-      options = options || {};
-      console.log('Happy::init', options);
-      const elContext = options.elContext || document;
-      const formSelector = options.formSelector || 'form';
+      elContext = elContext || document;
+      formSelector = formSelector || 'form';
+      console.log('Happy::init', elContext, formSelector);
       const formElements = elContext.querySelectorAll(formSelector);
 
       formElements.forEach(elForm => this.forms.push(new HappyForm(this, { el: elForm })));
